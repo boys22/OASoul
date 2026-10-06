@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>OA Soul</title>
-<meta name="description" content="구르기·스태미나·에스트로 2페이즈 보스와 싸우는 브라우저 소울류 게임. PC와 모바일에서 플레이할 수 있습니다.">
+<meta name="description" content="구르기·스태미나·에스트로 보스와 싸우는 브라우저 소울류 게임. 노멀·하드·헬 난이도, PC와 모바일 지원.">
 <meta property="og:title" content="OA Soul">
 <meta property="og:description" content="브라우저에서 바로 하는 소울류 보스전. 명예의 전당에 이름을 남겨 보세요.">
 <meta property="og:type" content="website">
@@ -69,7 +69,7 @@ kbd{font-family:var(--f-body);font-size:12px;font-weight:500;color:var(--bone);b
 .board h2 small{font-family:var(--f-latin);font-size:11px;letter-spacing:.3em;color:var(--gold);margin-left:10px;font-weight:600}
 .board .src{font-size:12px;color:var(--dim)}
 .tbl{overflow-x:auto;border:1px solid var(--line);background:var(--ash)}
-table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}
 th,td{padding:7px 12px;text-align:left;white-space:nowrap}
 th{font-weight:500;color:var(--dim);font-size:12px;border-bottom:1px solid var(--line)}
 td{border-bottom:1px solid #221d18;font-variant-numeric:tabular-nums}
@@ -112,6 +112,22 @@ html.mobile canvas#game{height:100%;aspect-ratio:auto}
 .bclose{display:none}
 html.mobile.show-board .board{position:fixed;inset:calc(12px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));z-index:60;background:var(--void);border:1px solid var(--line);padding:14px;overflow:auto;align-content:start}
 html.mobile.show-board .bclose{display:inline-block}
+.diffsel{position:absolute;left:50%;top:calc(50% + 4px);transform:translateX(-50%);width:min(92%,440px);display:grid;gap:8px;justify-items:center;pointer-events:auto}
+.drow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.drow button{font:inherit;cursor:pointer;min-width:96px;padding:7px 14px;background:rgba(14,12,10,.6);border:1px solid var(--line);color:var(--bone);display:grid;gap:1px;justify-items:center}
+.drow button b{font-family:var(--f-display);font-size:17px;font-weight:800}
+.drow button small{font-family:var(--f-latin);font-size:10px;letter-spacing:.18em;color:var(--dim)}
+.drow button[aria-checked="true"]{border-color:var(--gold);background:rgba(201,164,92,.18);box-shadow:inset 0 0 0 1px var(--gold)}
+.drow button.d-hell[aria-checked="true"]{border-color:var(--ember);background:rgba(224,112,58,.16);box-shadow:inset 0 0 0 1px var(--ember)}
+.drow button:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+#diffDesc{margin:0;font-size:13px;color:var(--bone);text-align:center;text-shadow:0 1px 3px #000;min-height:1.4em}
+.bfilter{display:flex;gap:6px;flex-wrap:wrap}
+.bfilter button{font:inherit;font-size:13px;cursor:pointer;padding:5px 14px;background:transparent;border:1px solid var(--line);color:var(--dim)}
+.bfilter button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#16120d;font-weight:700}
+.bfilter button:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
+.dtag{font-size:11px;font-weight:700;padding:1px 8px;border:1px solid currentColor}
+.dtag.d-normal{color:var(--dim)} .dtag.d-hard{color:var(--bone)} .dtag.d-hell{color:var(--ember)} .dtag.d-etc{color:var(--gold)}
+.bname{margin-left:6px;color:var(--dim);font-size:12px}
 .safe-probe{position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 </style>
 </head>
@@ -146,6 +162,10 @@ html.mobile.show-board .bclose{display:inline-block}
         <button id="mExit">PC 모드</button>
       </div>
     </div>
+    <div class="diffsel" id="diffSel" role="radiogroup" aria-label="난이도">
+      <div class="drow"></div>
+      <p id="diffDesc"></p>
+    </div>
     <div class="result" id="result" hidden>
       <div class="rcard" role="dialog" aria-labelledby="rLbl">
         <div class="rtop"><span class="lbl" id="rLbl">SCORE</span><span class="total" id="rTotal">0</span></div>
@@ -172,17 +192,18 @@ html.mobile.show-board .bclose{display:inline-block}
     <span><kbd>E</kbd> 에스트 회복</span>
     <span><kbd>R</kbd> 재도전</span>
   </div>
-  <p class="note">PC는 키보드로, 휴대폰·태블릿은 오른쪽 위 <b>모바일</b> 모드로 플레이합니다. 카메라는 항상 보스를 바라보는 락온 상태입니다. 구르기 초반에는 무적 시간이 있고, 보스에게 피해를 계속 주면 자세가 무너져 큰 피해를 받습니다.<br>점수 = 보스에게 준 피해 + 아낀 에스트 1병당 최대 150 (보스 체력을 깎은 비율만큼) + 처치 보너스 1,000</p>
+  <p class="note">PC는 키보드로, 휴대폰·태블릿은 오른쪽 위 <b>모바일</b> 모드로 플레이합니다. 카메라는 항상 보스를 바라보는 락온 상태입니다. 구르기 초반에는 무적 시간이 있고, 보스에게 피해를 계속 주면 자세가 무너져 큰 피해를 받습니다.<br>점수 = 보스에게 준 피해 + 처치 보너스 1,000 + 남은 에스트 1병당 150 (보스를 쓰러뜨렸을 때만). 난이도는 타이틀 화면에서 고릅니다.</p>
 
   <section class="board" aria-labelledby="boardTitle">
     <header>
       <h2 id="boardTitle">명예의 전당<small>HALL OF ASH</small></h2>
       <span class="hright"><span class="src" id="boardSrc">기록을 불러오는 중…</span><button class="btn bclose" id="boardClose">닫기</button></span>
     </header>
+    <div class="bfilter" id="boardFilter" role="group" aria-label="난이도별 보기"></div>
     <div class="tbl">
       <table>
-        <thead><tr><th>순위</th><th>이름</th><th class="num">점수</th><th>결과</th><th class="num">보스 피해</th><th class="num">에스트</th><th class="num">시간</th><th class="num">날짜</th></tr></thead>
-        <tbody id="boardBody"><tr><td colspan="8" class="empty">아직 기록이 없습니다. 첫 번째 도전자가 되어 보세요.</td></tr></tbody>
+        <thead><tr><th>순위</th><th>이름</th><th>난이도</th><th class="num">점수</th><th>진행</th><th class="num">보스 피해</th><th class="num">에스트</th><th class="num">시간</th><th class="num">날짜</th></tr></thead>
+        <tbody id="boardBody"><tr><td colspan="9" class="empty">아직 기록이 없습니다. 첫 번째 도전자가 되어 보세요.</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -195,9 +216,8 @@ html.mobile.show-board .bclose{display:inline-block}
 (() => {
 'use strict';
 // =====================================================================
-//  ★ 공개 사이트 설정 — Supabase 프로젝트의 값 두 개를 따옴표 안에 넣으세요.
-//    비워 두면 순위가 "이 브라우저에만" 저장됩니다.
-//    service_role(비밀) 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
+//  ★ 공개 사이트(GitHub) 설정 — Supabase 프로젝트 값. 비워 두면 순위는 이 브라우저에만 저장
+//    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
@@ -207,7 +227,7 @@ const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
 // =====================================================================
 const BOSSES = {
   knight: {
-    name: '잿빛 기사 아르논',
+    name: '잿빛 기사 아르논', short: '아르논', chapter: 1,
     hp: 1000, poise: 150, r: 30, speed: 92,
     armor: '#4b4741', cape: '#3a1f1a', eye: '#d8cfbc',
     phases: [
@@ -234,6 +254,16 @@ const PATTERNS = {
   leap:   { range:[140,999], rec:1.05, steps:[ {type:'leap', wind:.4, air:.85, radius:100, dmg:36} ] },
   nova:   { range:[0,300],  rec:.75, steps:[ {type:'nova', wind:1.0, speed:260, thick:24, dmg:24} ] },
 };
+
+// 난이도 — 새 난이도는 여기에 한 줄 추가하면 선택 화면과 명예의 전당 필터에 자동으로 나타납니다.
+//   telegraph: 공격 범위 바닥 표시, speed: 보스 이동·돌진 속도 배율, tempo: 보스 공격 속도 배율(예비동작·후딜이 짧아짐)
+const DIFFICULTY = {
+  normal: { label: '노멀', en: 'NORMAL', desc: '보스 공격 범위가 바닥에 빨갛게 표시됩니다.', telegraph: true,  speed: 1,    tempo: 1 },
+  hard:   { label: '하드', en: 'HARD',   desc: '공격 범위 표시가 사라집니다. 보스의 자세를 보고 피하세요.', telegraph: false, speed: 1,    tempo: 1 },
+  hell:   { label: '헬',   en: 'HELL',   desc: '표시 없음. 보스가 더 빠르게 움직이고 더 빨리 휘두릅니다.', telegraph: false, speed: 1.3,  tempo: 1.3 },
+};
+const DIFF_KEYS = Object.keys(DIFFICULTY);
+const DIFF = () => DIFFICULTY[game.diff] || DIFFICULTY.normal;
 
 // 플레이어 공격
 const PATK = {
@@ -491,6 +521,12 @@ window.addEventListener('keydown', e => {
   if (e.repeat) return;
   keys[e.code] = true;
   if (game.state === 'title' && (e.code === 'Enter' || e.code === 'Space')) { startFight(); return; }
+  if (game.state === 'title'){
+    const i = DIFF_KEYS.indexOf(game.diff);
+    if (/^Digit[1-9]$/.test(e.code) && DIFF_KEYS[+e.code.slice(5) - 1]) { setDiff(DIFF_KEYS[+e.code.slice(5) - 1]); return; }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { setDiff(DIFF_KEYS[(i - 1 + DIFF_KEYS.length) % DIFF_KEYS.length]); return; }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { setDiff(DIFF_KEYS[(i + 1) % DIFF_KEYS.length]); return; }
+  }
   if (e.code === 'KeyR' && game.state !== 'title' && (game.state !== 'fight')) { startFight(); return; }
   if (e.code === 'KeyJ') buf.light = now;
   if (e.code === 'KeyK') buf.heavy = now;
@@ -587,7 +623,8 @@ function moveVec(){
 
 // ---------- 상태 ----------
 let P, B, waves, parts, freeze = 0, shake = 0, TOK = 0;
-const game = { state:'title', t:0, endT:0, deaths:0 };
+const game = { state:'title', t:0, endT:0, deaths:0, diff:'normal' };
+try { const d = localStorage.getItem('oa-soul-diff'); if (d && DIFFICULTY[d]) game.diff = d; } catch(e) {}
 try { game.deaths = +localStorage.getItem('ashen-knight-deaths') || 0; } catch(e) {}
 
 function makePlayer(){
@@ -795,11 +832,11 @@ function runStep(b, dt, tempo){
       if (sp.t < wind * .85) b.face = turn(b.face, toP, 6 * dt);
       if (sp.t >= wind){ sp.phase = 'active'; sp.t = 0; }
     } else {
-      b.vx = Math.cos(b.face) * s.speed; b.vy = Math.sin(b.face) * s.speed;
+      b.vx = Math.cos(b.face) * s.speed * DIFF().speed; b.vy = Math.sin(b.face) * s.speed * DIFF().speed;
       if (dist(b, P) < b.r + P.r + 6) hurtPlayer(s.dmg, b, sp.token, 340);
       if (Math.random() < .5) burst(b.x, b.y, 1, '#6b6157', 40, .5, 3);
       const atWall = Math.hypot(b.x - AR.x, b.y - AR.y) > AR.r - b.r - 3;
-      if (sp.t >= s.dur || (atWall && sp.t > .08)){ if (atWall){ shake = Math.max(shake, 6); burst(b.x, b.y, 10, '#6b6157', 140, .5, 3); } nextStep(b, tempo); }
+      if (sp.t >= s.dur / DIFF().speed || (atWall && sp.t > .08)){ if (atWall){ shake = Math.max(shake, 6); burst(b.x, b.y, 10, '#6b6157', 140, .5, 3); } nextStep(b, tempo); }
     }
   } else if (s.type === 'leap'){
     if (sp.phase === 'wind'){
@@ -829,7 +866,7 @@ function runStep(b, dt, tempo){
 }
 
 function updateBoss(dt){
-  const b = B, ph = b.D.phases[b.phase], tempo = ph.tempo || 1;
+  const b = B, ph = b.D.phases[b.phase], tempo = (ph.tempo || 1) * DIFF().tempo;
   b.t += dt; b.flash = Math.max(0, b.flash - dt);
   if (b.chipT > 0) b.chipT -= dt; else b.chip = Math.max(b.hp, b.chip - b.max * .3 * dt);
   if (b.dmgT > 0) b.dmgT -= dt; else b.dmgAcc = 0;
@@ -846,7 +883,7 @@ function updateBoss(dt){
       if (playerDown){ b.vx = b.vy = 0; break; }
       b.cool -= dt;
       if (b.cool <= 0){ const name = pickPattern(b, d); if (name){ startPattern(b, name); break; } }
-      const sp = b.D.speed * (ph.speedMul || 1);
+      const sp = b.D.speed * (ph.speedMul || 1) * DIFF().speed;
       if (d > 85){ b.vx = Math.cos(toP) * sp; b.vy = Math.sin(toP) * sp; }
       else { if (Math.random() < dt * .5) b.strafe *= -1; b.vx = Math.cos(toP + Math.PI / 2) * 35 * b.strafe; b.vy = Math.sin(toP + Math.PI / 2) * 35 * b.strafe; }
       break;
@@ -966,7 +1003,7 @@ function updateScene(dt){
   let bang = .75, btilt = -.7, blen = 95, btrail = null, brz = 0, brx = 0, bRigY = .95;
   const phase2 = b.phase > 0;
   if (b.state === 'attack' && b.sp){
-    const sp = b.sp, s = sp.s, tempo = ph.tempo || 1;
+    const sp = b.sp, s = sp.s, tempo = (ph.tempo || 1) * DIFF().tempo;
     if (s.type === 'swing'){
       blen = s.range - 18;
       if (sp.phase === 'wind'){ const k = clamp(sp.t / (s.wind / tempo), 0, 1); bang = lerp(.75, -sp.side * (s.arc / 2 + .45), easeOut(k)); btilt = lerp(-.7, .6, k); }
@@ -998,8 +1035,8 @@ function updateScene(dt){
 
   // ---- 공격 예고
   for (const key of ['cone', 'rect', 'ring', 'fill', 'nova']) tele[key].g.visible = false;
-  if (b.state === 'attack' && b.sp){
-    const sp = b.sp, s = sp.s, tempo = ph.tempo || 1, k = clamp(sp.t / (s.wind / tempo), 0, 1);
+  if (b.state === 'attack' && b.sp && DIFF().telegraph){
+    const sp = b.sp, s = sp.s, tempo = (ph.tempo || 1) * DIFF().tempo, k = clamp(sp.t / (s.wind / tempo), 0, 1);
     if (s.type === 'swing' && sp.phase === 'wind'){
       const key = s.range + '|' + s.arc;
       if (tele.coneKey !== key){ tele.coneKey = key; tele.cone.m.geometry.dispose(); tele.cone.m.geometry = new THREE.CircleGeometry((s.range + 8) * S, 40, -s.arc / 2, s.arc); }
@@ -1109,6 +1146,9 @@ function drawHUD(){
   ctx.shadowBlur = 0; ctx.restore();
   ctx.font = '600 15px "Cinzel", serif'; ctx.fillStyle = COL.bone; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('× ' + P.flasks, x0 + 20, y0 + 48);
+  const dk = game.diff; ctx.font = '700 12px "Cinzel", serif';
+  ctx.fillStyle = dk === 'hell' ? COL.ember : dk === 'hard' ? COL.bone : COL.dim;
+  spaced(DIFF().en, x0 + 66, y0 + 49, 3);
   // 보스 바: PC는 아래, 모바일 가로는 위 가운데, 모바일 세로는 내 체력 아래
   let bx, bw, by;
   if (!mobile){ bw = Math.min(600, W - 120); bx = (W - bw) / 2; by = H - 32; }
@@ -1136,12 +1176,12 @@ function drawScreens(){
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (game.state === 'title'){
     ctx.fillStyle = 'rgba(8,7,6,.3)'; ctx.fillRect(0, 0, W, H);
-    centerBand(1, 200);
+    centerBand(1, 300);
     const ts = Math.min(1, W / 560);
-    ctx.fillStyle = COL.bone; ctx.font = `700 ${Math.round(66 * ts)}px "Cinzel", serif`; spaced('OA SOUL', W / 2, H / 2 - 22 * ts, 10 * ts);
-    ctx.fillStyle = COL.gold; ctx.font = '600 15px "Cinzel", serif'; spaced('CHAPTER I · THE ASHEN KNIGHT', W / 2, H / 2 + 26, 6 * ts);
+    ctx.fillStyle = COL.bone; ctx.font = `700 ${Math.round(66 * ts)}px "Cinzel", serif`; spaced('OA SOUL', W / 2, H / 2 - 62 * ts, 10 * ts);
+    ctx.fillStyle = COL.gold; ctx.font = '600 15px "Cinzel", serif'; spaced('CHAPTER I · THE ASHEN KNIGHT', W / 2, H / 2 - 16, 6 * ts);
     ctx.globalAlpha = .55 + .45 * Math.sin(now * 3);
-    ctx.fillStyle = COL.bone; ctx.font = '500 15px "Noto Sans KR", sans-serif'; ctx.fillText(mobile ? '화면을 눌러 시작' : 'Enter 또는 클릭하여 시작', W / 2, H / 2 + 76);
+    ctx.fillStyle = COL.bone; ctx.font = '500 15px "Noto Sans KR", sans-serif'; ctx.fillText(mobile ? '난이도를 고르고 화면을 눌러 시작' : '난이도를 고르고 Enter 또는 클릭하여 시작', W / 2, H / 2 + 122);
     ctx.globalAlpha = 1;
   } else if (game.state === 'dead'){
     const k = clamp((game.endT - .6) / 1.4, 0, 1);
@@ -1177,12 +1217,13 @@ function draw(dt){
 // =====================================================================
 const SCORE = { perFlaskSaved: 150, winBonus: 1000 };
 function calcScore(){
-  const dmg = Math.round(B.max - B.hp), progress = dmg / B.max;
+  const dmg = Math.round(B.max - B.hp);
   const saved = 3 - P.flasksUsed, won = game.state === 'won';
-  // 아낀 에스트 보너스는 보스 체력을 깎은 비율만큼만 인정 (바로 죽어서 점수 받는 것 방지)
-  const flaskPts = Math.round(saved * SCORE.perFlaskSaved * progress);
+  // 남은 에스트는 보스를 쓰러뜨렸을 때만 점수로 인정 (죽으면 0)
+  const flaskPts = won ? saved * SCORE.perFlaskSaved : 0;
   const winPts = won ? SCORE.winBonus : 0;
-  return { dmg, saved, used: P.flasksUsed, won, flaskPts, winPts, total: dmg + flaskPts + winPts, time: Math.floor(game.t) };
+  return { dmg, saved, used: P.flasksUsed, won, flaskPts, winPts, total: dmg + flaskPts + winPts, time: Math.floor(game.t),
+    diff: game.diff, cleared: won ? B.D.chapter : B.D.chapter - 1, boss: 'knight' };
 }
 const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -1192,21 +1233,25 @@ const LS_SCORES = 'ashen-knight-3d-scores', LS_NAME = 'ashen-knight-name';
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { return false; } };
 const clean = r => ({ id: String(r.id), name: String(r.name || '이름 없음').slice(0, 12), score: +r.score || 0, dmg: +r.dmg || 0,
-  flasksUsed: +r.flasksUsed || 0, won: !!r.won, time: +r.time || 0, at: +r.at || 0, uid: r.uid || null });
-const sortRows = rows => rows.slice().sort((a, b) => b.score - a.score || a.at - b.at);
+  flasksUsed: +r.flasksUsed || 0, won: !!r.won, time: +r.time || 0, at: +r.at || 0, uid: r.uid || null,
+  diff: (typeof r.diff === 'string' && r.diff) ? r.diff : 'normal', cleared: r.cleared != null ? +r.cleared || 0 : (r.won ? 1 : 0),
+  boss: (typeof r.boss === 'string' && BOSSES[r.boss]) ? r.boss : 'knight' });
+store.filter = 'all';
+const inFilter = r => store.filter === 'all' || r.diff === store.filter;
 
-// Supabase 순위표 (scores 테이블 — setup.sql 참고)
-const fromRow = r => clean({ id: r.id, name: r.name, score: r.score, dmg: r.dmg, flasksUsed: r.flasks_used,
-  won: r.won, time: r.time_sec, at: Date.parse(r.created_at) || 0 });
+// Supabase 순위표 (scores 테이블 — setup.sql / migrate-v2.sql 참고)
+const fromRow = r => clean({ id: r.id, name: r.name, score: r.score, dmg: r.dmg, flasksUsed: r.flasks_used, won: r.won,
+  time: r.time_sec, at: Date.parse(r.created_at) || 0, diff: r.diff, cleared: r.cleared, boss: r.boss });
 async function loadSupa(){
-  const { data, error } = await store.sb.from('scores')
-    .select('id,name,score,dmg,flasks_used,won,time_sec,created_at')
-    .order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50);
+  let q = store.sb.from('scores').select('id,name,score,dmg,flasks_used,won,time_sec,created_at,diff,cleared,boss');
+  if (store.filter !== 'all') q = q.eq('diff', store.filter);
+  const { data, error } = await q.order('score', { ascending: false }).order('created_at', { ascending: true }).limit(50);
   const src = document.getElementById('boardSrc');
   if (error){ src.textContent = '순위를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.'; return; }
   src.textContent = '모든 플레이어가 함께 보는 순위입니다';
   store.rows = data.map(fromRow); renderBoard();
 }
+const sortRows = rows => rows.slice().sort((a, b) => b.score - a.score || a.at - b.at);
 
 async function initStore(){
   if (SUPABASE_URL && SUPABASE_KEY && window.supabase){
@@ -1227,7 +1272,7 @@ async function initStore(){
     try { store.uid = user ? await user.id() : null; } catch(e) {}
     try { if (user && user.can && (await user.can('data.write')) === false) store.canWrite = false; } catch(e) {}
     src.textContent = '이 페이지를 여는 모든 사람과 공유되는 순위입니다';
-    db.collection('scores').orderBy('score', 'desc').limit(50).onSnapshot(
+    db.collection('scores').orderBy('score', 'desc').limit(300).onSnapshot(
       s => { store.rows = s.docs.map(d => clean({ id: d.id, ...d.data() })); renderBoard(); },
       () => { src.textContent = '순위를 불러오지 못했습니다. 페이지를 새로고침해 주세요.'; });
   } else {
@@ -1241,12 +1286,12 @@ async function saveScore(entry){
   if (store.mode === 'supa'){
     const { data, error } = await store.sb.from('scores').insert({
       name: entry.name, score: entry.score, dmg: entry.dmg, flasks_used: entry.flasksUsed, won: entry.won, time_sec: entry.time,
+      diff: entry.diff, cleared: entry.cleared, boss: entry.boss,
     }).select().single();
     if (error) throw { code: 'supa', message: error.message };
     const row = fromRow(data); store.mine.add(row.id);
-    const { count } = await store.sb.from('scores').select('id', { count: 'exact', head: true }).gt('score', row.score);
+    const { count } = await store.sb.from('scores').select('id', { count: 'exact', head: true }).eq('diff', row.diff).gt('score', row.score);
     row.rank = (count || 0) + 1;
-    await loadSupa();
     return row;
   }
   if (store.mode === 'db'){
@@ -1263,20 +1308,29 @@ async function saveScore(entry){
 
 function renderBoard(){
   const body = document.getElementById('boardBody');
-  const rows = sortRows(store.rows).slice(0, 20);
+  document.querySelectorAll('#boardFilter button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === store.filter)));
+  const rows = sortRows(store.rows.filter(inFilter)).slice(0, 20);
   body.textContent = '';
   if (!rows.length){
-    const tr = body.insertRow(), td = tr.insertCell(); td.colSpan = 8; td.className = 'empty';
-    td.textContent = '아직 기록이 없습니다. 첫 번째 도전자가 되어 보세요.'; return;
+    const tr = body.insertRow(), td = tr.insertCell(); td.colSpan = 9; td.className = 'empty';
+    td.textContent = store.filter === 'all' ? '아직 기록이 없습니다. 첫 번째 도전자가 되어 보세요.'
+      : `${DIFFICULTY[store.filter].label} 모드 기록이 아직 없습니다.`; return;
   }
   rows.forEach((r, i) => {
     const tr = body.insertRow();
     if (i === 0) tr.classList.add('top1');
     if (store.mine.has(r.id)) tr.classList.add('mine');
     const cell = (text, cls) => { const td = tr.insertCell(); td.textContent = text; if (cls) td.className = cls; return td; };
-    cell(String(i + 1), 'rank'); cell(r.name, 'name'); cell(r.score.toLocaleString(), 'num score');
-    const res = tr.insertCell(), tag = document.createElement('span');
-    tag.className = 'tag ' + (r.won ? 'win' : 'die'); tag.textContent = r.won ? '처치' : '사망'; res.append(tag);
+    cell(String(i + 1), 'rank'); cell(r.name, 'name');
+    const dc = tr.insertCell(), dt = document.createElement('span'), dd = DIFFICULTY[r.diff];
+    dt.className = 'dtag d-' + (dd ? r.diff : 'etc'); dt.textContent = dd ? dd.label : r.diff; dc.append(dt);
+    cell(r.score.toLocaleString(), 'num score');
+    // 진행: 어느 보스(장)까지 깼는지
+    const res = tr.insertCell(), tag = document.createElement('span'), bn = document.createElement('span');
+    const boss = BOSSES[r.boss] || BOSSES.knight;
+    tag.className = 'tag ' + (r.cleared > 0 ? 'win' : 'die');
+    tag.textContent = r.cleared > 0 ? `${r.cleared}장 클리어` : `${boss.chapter}장 사망`;
+    bn.className = 'bname'; bn.textContent = boss.short; res.append(tag, bn);
     cell(`${r.dmg.toLocaleString()}`, 'num'); cell(`${r.flasksUsed}병 사용`, 'num'); cell(fmtTime(r.time), 'num');
     const d = new Date(r.at); cell(r.at ? `${d.getMonth() + 1}/${d.getDate()}` : '-', 'num');
   });
@@ -1287,11 +1341,11 @@ const $ = id => document.getElementById(id);
 function hideResult(){ $('result').hidden = true; }
 function showResult(){
   const s = calcScore(); game.last = s;
-  $('rLbl').textContent = s.won ? 'VICTORY · SCORE' : 'SCORE';
+  $('rLbl').textContent = `${DIFF().en} · ${s.won ? 'VICTORY' : 'SCORE'}`;
   $('rTotal').textContent = s.total.toLocaleString();
   const rows = $('rRows'); rows.textContent = '';
   [[`보스에게 준 피해 (${s.dmg.toLocaleString()} / ${B.max.toLocaleString()})`, '+' + s.dmg.toLocaleString()],
-   [`아낀 에스트 ${s.saved}병`, '+' + s.flaskPts.toLocaleString()],
+   [s.won ? `남은 에스트 ${s.saved}병` : '남은 에스트 (처치해야 인정)', s.won ? '+' + s.flaskPts.toLocaleString() : '—'],
    ['처치 보너스', s.won ? '+' + s.winPts.toLocaleString() : '—'],
    ['전투 시간', fmtTime(s.time)]].forEach(([k, v]) => {
     const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
@@ -1317,9 +1371,11 @@ async function onSave(){
   $('rSave').disabled = true; $('rMsg').textContent = '기록하는 중…';
   lsSet(LS_NAME, name);
   try {
-    const row = await saveScore({ name, score: s.total, dmg: s.dmg, flasksUsed: s.used, won: s.won, time: s.time, at: Date.now(), uid: store.uid || null, ver: 1 });
-    const rank = row.rank || sortRows([...store.rows.filter(r => r.id !== row.id), row]).findIndex(r => r.id === row.id) + 1;
-    finishResult(`${name} 님의 기록을 남겼습니다. 현재 ${rank}위입니다.`);
+    const row = await saveScore({ name, score: s.total, dmg: s.dmg, flasksUsed: s.used, won: s.won, time: s.time, at: Date.now(),
+      uid: store.uid || null, ver: 2, diff: s.diff, cleared: s.cleared, boss: s.boss });
+    const rank = row.rank || sortRows([...store.rows.filter(r => r.id !== row.id && r.diff === row.diff), row]).findIndex(r => r.id === row.id) + 1;
+    setFilter(row.diff);
+    finishResult(`${name} 님의 기록을 남겼습니다. ${DIFFICULTY[row.diff].label} 모드 ${rank}위입니다.`);
   } catch(e) {
     $('rSave').disabled = false;
     const code = e && e.code;
@@ -1336,6 +1392,34 @@ $('rName').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); onSave(); }
   if (e.key === 'Escape'){ e.preventDefault(); finishResult('기록하지 않았습니다.'); }
 });
+function setFilter(k){
+  store.filter = k;
+  if (store.mode === 'supa') loadSupa(); else renderBoard();
+}
+(() => {
+  const f = $('boardFilter');
+  for (const k of ['all', ...DIFF_KEYS]){
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.k = k;
+    b.textContent = k === 'all' ? '전체' : DIFFICULTY[k].label; b.setAttribute('aria-pressed', String(k === 'all'));
+    b.addEventListener('click', () => setFilter(k)); f.append(b);
+  }
+  const sel = $('diffSel'), row = sel.querySelector('.drow');
+  DIFF_KEYS.forEach((k, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.k = k; b.className = 'd-' + k;
+    b.setAttribute('role', 'radio');
+    const t = document.createElement('b'); t.textContent = DIFFICULTY[k].label;
+    const en = document.createElement('small'); en.textContent = (i + 1) + ' · ' + DIFFICULTY[k].en;
+    b.append(t, en); b.addEventListener('click', () => setDiff(k)); row.append(b);
+  });
+  setDiff(game.diff);
+})();
+function setDiff(k){
+  if (!DIFFICULTY[k]) return;
+  game.diff = k;
+  try { localStorage.setItem('oa-soul-diff', k); } catch(e) {}
+  document.querySelectorAll('#diffSel .drow button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.k === k)));
+  $('diffDesc').textContent = DIFFICULTY[k].desc;
+}
 initStore();
 
 // ---------- 루프 ----------
@@ -1345,6 +1429,8 @@ function frame(ts){
   const dt = Math.min(.05, (ts - last) / 1000); last = ts; now += dt;
   if (freeze > 0) freeze -= dt; else update(dt);
   syncTouch();
+  const ds = document.getElementById('diffSel'), showSel = game.state === 'title';
+  if (ds.hidden === showSel) ds.hidden = !showSel;
   shake = reduced ? 0 : Math.max(0, shake - dt * 30);
   draw(dt);
   requestAnimationFrame(frame);
