@@ -140,7 +140,7 @@ html.mobile.show-board .bclose{display:inline-block}
   <header>
     <h1>OA Soul<small>CHAPTER I · ASHEN KNIGHT</small></h1>
     <div class="hright">
-      <div class="ver"><b id="verTag">BETA 0.2</b> · 락온 3인칭 시점 · 순위표</div>
+      <div class="ver"><b id="verTag">BETA 0.3</b> · 락온 3인칭 시점 · 순위표</div>
       <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
       <div class="mode" role="group" aria-label="조작 모드">
         <button id="modePc" aria-pressed="true">PC</button>
@@ -229,7 +229,7 @@ html.mobile.show-board .bclose{display:inline-block}
 //    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
 // 게임 버전 (화면 표시용). 버전 기록은 CHANGELOG.md 참고
-const GAME_VERSION = 'BETA 0.2';
+const GAME_VERSION = 'BETA 0.3';
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
 
@@ -480,79 +480,6 @@ function addMesh(parent, geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, 
   m.castShadow = shadow; m.receiveShadow = shadow; parent.add(m); return m;
 }
 
-// 기사 모델: 상자 조립 + 관절 계층. 앞쪽 = 로컬 +X, 위 = +Y, 오른쪽 = +Z
-//   body ─ hips(다리) / spine(허리 위: 몸통·머리·망토)
-//                         └ shoulderR → upperArm → elbowR(foreArm) → handR → 칼(grip → blade)
-//                         └ shoulderL → upperArm → elbowL(foreArm) → handL (+ 방패)
-function buildArm(parent, side, mats, o){
-  const z = side * .42;
-  const sh = new THREE.Group(); sh.position.set(0, .57, z); parent.add(sh);             // Shoulder
-  const upper = new THREE.Group(); sh.add(upper);                                        // UpperArm
-  addMesh(upper, BOX(.17, .32, .17), mats.dark, 0, -.15, 0);
-  addMesh(upper, BOX(.2, .12, .2), mats.armor, 0, -.04, 0);
-  const el = new THREE.Group(); el.position.y = -.31; upper.add(el);                     // ForeArm (팔꿈치)
-  addMesh(el, BOX(.16, .3, .16), mats.armor, 0, -.14, 0);
-  const wr = new THREE.Group(); wr.position.y = -.3; el.add(wr);                          // Hand (손목)
-  addMesh(wr, BOX(.15, .12, .15), mats.dark, 0, -.04, 0);
-  return { sh, upper, el, wr };
-}
-
-function buildKnight(o){
-  const root = new THREE.Group(), rig = new THREE.Group(), body = new THREE.Group();
-  root.add(rig); rig.position.y = .95; rig.add(body); body.position.y = -.95;
-  const armor = new THREE.MeshStandardMaterial({ color: o.armor, metalness: .65, roughness: .42 });
-  const dark = new THREE.MeshStandardMaterial({ color: o.dark, metalness: .35, roughness: .75 });
-  const cloth = new THREE.MeshStandardMaterial({ color: o.cape, roughness: .95, side: THREE.DoubleSide });
-  const eyeM = new THREE.MeshBasicMaterial({ color: o.eye });
-  const steel = new THREE.MeshStandardMaterial({ color: 0xcfd3d6, metalness: .9, roughness: .22, emissive: 0x000000 });
-  const mats = { armor, dark };
-  // 다리
-  const hipL = new THREE.Group(), hipR = new THREE.Group();
-  hipL.position.set(0, .85, -.15); hipR.position.set(0, .85, .15); body.add(hipL, hipR);
-  for (const hp of [hipL, hipR]){
-    addMesh(hp, BOX(.2, .5, .2), dark, 0, -.25, 0);
-    addMesh(hp, BOX(.23, .4, .23), armor, 0, -.62, 0);
-    addMesh(hp, BOX(.32, .12, .23), dark, .05, -.84, 0);
-  }
-  addMesh(body, BOX(.48, .14, .66), dark, 0, .9, 0);
-  addMesh(body, BOX(.46, .26, .6), dark, 0, .74, 0);
-  // 허리 위 (비틀기·숙이기)
-  const spine = new THREE.Group(); spine.position.y = .95; body.add(spine);
-  addMesh(spine, BOX(.44, .62, .62), armor, 0, .25, 0);
-  addMesh(spine, BOX(.12, .44, .5), armor, .2, .29, 0);
-  addMesh(spine, BOX(.42, .18, .32), armor, 0, .61, -.42, -.28);
-  addMesh(spine, BOX(.42, .18, .32), armor, 0, .61, .42, .28);
-  const head = new THREE.Group(); head.position.set(.02, .77, 0); spine.add(head);
-  addMesh(head, BOX(.34, .36, .32), armor);
-  addMesh(head, BOX(.02, .05, .22), eyeM, .175, .02, 0, 0, 0, 0, false);
-  if (o.horns){
-    addMesh(head, new THREE.ConeGeometry(.06, .4, 6), dark, -.03, .26, -.17, -.55);
-    addMesh(head, new THREE.ConeGeometry(.06, .4, 6), dark, -.03, .26, .17, .55);
-  }
-  if (o.plume) addMesh(head, BOX(.34, .1, .05), new THREE.MeshStandardMaterial({ color: o.plume, roughness: .9 }), -.06, .23, 0);
-  const cape = addMesh(spine, BOX(.05, 1.15, .64), cloth, -.28, .09, 0, 0, 0, -.08);
-  // 팔
-  const armR = buildArm(spine, 1, mats, o), armL = buildArm(spine, -1, mats, o);
-  // 칼: 손 기준 +X 방향으로 뻗음 (주먹을 쥔 방향)
-  const grip = new THREE.Group(); grip.position.set(0, -.05, 0); armR.wr.add(grip);
-  addMesh(grip, BOX(.3, .05, .05), dark, .02, 0, 0);
-  addMesh(grip, BOX(.05, .06, o.guard), dark, .15, 0, 0);
-  const bladeG = new THREE.Group(); bladeG.position.x = .17; grip.add(bladeG);
-  addMesh(bladeG, BOX(1, .045, o.bladeW), steel, .5, 0, 0);
-  bladeG.scale.x = o.blade;
-  const tip = new THREE.Object3D(); tip.position.x = 1; bladeG.add(tip);
-  const base = new THREE.Object3D(); base.position.x = .18; bladeG.add(base);
-  // 방패: 왼손에 붙음
-  const shield = !o.shield ? null : addMesh(armL.wr, BOX(.62, .07, .46), new THREE.MeshStandardMaterial({ color: 0x5a4634, roughness: .8 }), .04, -.14, -.04);   // 방패 면이 팔뚝 방향(앞)을 향함
-  root.scale.setScalar(o.scale);
-  scene.add(root);
-  const k = { root, rig, body, spine, hipL, hipR, armR, armL, bladeG, tip, base, armor, eyeM, cape, steel, shield, walk: 0, o };
-  k.rest = mkPose(o.rest || {}, POSE_REST);
-  k.cur = clonePose(k.rest);
-  k.trail = makeTrail(o.trailColor || 0xf3e3c3);
-  return k;
-}
-
 // ---------- 칼 궤적 리본 (칼끝·칼뿌리 위치를 프레임마다 기록해 띠로 그림) ----------
 const TRAIL_N = 16;
 function makeTrail(color){
@@ -581,6 +508,416 @@ function updateTrail(k, active, strength){
   }
   tr.geo.attributes.position.needsUpdate = true; tr.geo.attributes.color.needsUpdate = true;
   tr.mesh.visible = n > 1;
+}
+
+// =====================================================================
+//  캐릭터 v2 — 작은 도형 조립 + 관절별로 합치기 + 외곽선 + 금속 질감
+// =====================================================================
+// ---------- 질감: 코드로 그린 긁힘·녹·천 무늬 ----------
+function texCanvas(size, draw){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  draw(c.getContext('2d'), size);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding;
+  return t;
+}
+function metalTexture(seed, rust){
+  const R = rng(seed);
+  return texCanvas(256, (x, n) => {
+    x.fillStyle = '#e6e6e6'; x.fillRect(0, 0, n, n);
+    for (let i = 0; i < 1400; i++){ const v = 200 + R() * 55 | 0; x.fillStyle = `rgba(${v},${v},${v},.35)`; x.fillRect(R() * n, R() * n, 2, 2); }
+    for (let i = 0; i < 70; i++){   // 긁힘
+      const sx = R() * n, sy = R() * n, a = R() * Math.PI, l = 8 + R() * 40;
+      x.strokeStyle = R() < .5 ? 'rgba(255,255,255,.55)' : 'rgba(80,80,80,.35)'; x.lineWidth = R() < .2 ? 1.5 : .7;
+      x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + Math.cos(a) * l, sy + Math.sin(a) * l); x.stroke();
+    }
+    for (let i = 0; i < (rust ? 14 : 5); i++){   // 얼룩·녹
+      const cx = R() * n, cy = R() * n, r = 8 + R() * (rust ? 34 : 18);
+      const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, rust ? 'rgba(140,70,30,.55)' : 'rgba(60,55,50,.3)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill();
+    }
+  });
+}
+function clothTexture(seed){
+  const R = rng(seed);
+  return texCanvas(128, (x, n) => {
+    x.fillStyle = '#d8d8d8'; x.fillRect(0, 0, n, n);
+    for (let y = 0; y < n; y += 2){ x.fillStyle = `rgba(0,0,0,${.05 + R() * .06})`; x.fillRect(0, y, n, 1); }
+    for (let xx = 0; xx < n; xx += 2){ x.fillStyle = `rgba(255,255,255,${.03 + R() * .05})`; x.fillRect(xx, 0, 1, n); }
+    for (let i = 0; i < 10; i++){ const cx = R() * n, cy = R() * n, r = 6 + R() * 20, g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, 'rgba(40,30,25,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, n, n); }
+  });
+}
+// 금속이 주변을 비추도록 하는 간단한 환경광 (따뜻한 아래, 차가운 위)
+let ENV_TEX = null;
+function envTexture(){
+  if (ENV_TEX) return ENV_TEX;
+  const es = new THREE.Scene();
+  const geo = new THREE.SphereGeometry(10, 24, 12), cols = [];
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++){ const y = p.getY(i) / 10, c = new THREE.Color().setRGB(.16 + .2 * Math.max(0, y), .15 + .21 * Math.max(0, y), .14 + .26 * Math.max(0, y));
+    if (y < -.1) c.setRGB(.28, .17, .09); cols.push(c.r, c.g, c.b); }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  es.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshBasicMaterial({ color: 0xffe0b0 })); panel.position.set(4, 4, 6); panel.lookAt(0, 0, 0); es.add(panel);
+  const pm = new THREE.PMREMGenerator(renderer);
+  ENV_TEX = pm.fromScene(es, .03).texture; pm.dispose();
+  return ENV_TEX;
+}
+
+// ---------- 부품 모으기 → 관절마다 재질별로 하나로 합치기 + 외곽선 ----------
+const _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
+function Parts(){
+  const list = [];
+  const add = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => {
+    const m = new THREE.Matrix4().compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, ry, rz)), _s.set(sx, sy, sz));
+    list.push({ geo, mat, m }); return api;
+  };
+  const api = {
+    box: (w, h, d, mat, ...t) => add(new THREE.BoxGeometry(w, h, d), mat, ...t),
+    cyl: (rt, rb, h, seg, mat, ...t) => add(new THREE.CylinderGeometry(rt, rb, h, seg), mat, ...t),
+    sph: (r, mat, ...t) => add(new THREE.SphereGeometry(r, 14, 10), mat, ...t),
+    hemi: (r, mat, ...t) => add(new THREE.SphereGeometry(r, 14, 7, 0, TAU, 0, Math.PI / 2), mat, ...t),
+    cone: (r, h, seg, mat, ...t) => add(new THREE.ConeGeometry(r, h, seg), mat, ...t),
+    torus: (r, tube, mat, ...t) => add(new THREE.TorusGeometry(r, tube, 6, 24), mat, ...t),
+    // 두 점을 잇는 원기둥 (뿔·가시처럼 휘어진 모양을 마디로 만들 때)
+    link: (p0, p1, r0, r1, mat, seg = 6) => {
+      const dx = p1[0] - p0[0], dy = p1[1] - p0[1], dz = p1[2] - p0[2], len = Math.hypot(dx, dy, dz);
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dx / len, dy / len, dz / len));
+      const e = new THREE.Euler().setFromQuaternion(q);
+      return add(new THREE.CylinderGeometry(r1, r0, len * 1.08, seg), mat, (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2, e.x, e.y, e.z);
+    },
+    build(group, outline){
+      const byMat = new Map(), all = [];
+      for (const it of list){
+        const g = (it.geo.index ? it.geo.toNonIndexed() : it.geo); g.applyMatrix4(it.m);
+        if (!byMat.has(it.mat)) byMat.set(it.mat, []); byMat.get(it.mat).push(g); all.push(g);
+      }
+      for (const [mat, gs] of byMat){
+        const mesh = new THREE.Mesh(mergeGeos(gs), mat); mesh.castShadow = mat.userData.noShadow ? false : true; mesh.receiveShadow = true; group.add(mesh);
+      }
+      if (outline) group.add(outlineMesh(mergeGeos(all), outline));
+      return group;
+    },
+  };
+  return api;
+}
+function mergeGeos(gs){
+  let n = 0; gs.forEach(g => n += g.attributes.position.count);
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+  let o = 0;
+  for (const g of gs){
+    pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3);
+    if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+    o += g.attributes.position.count;
+  }
+  const m = new THREE.BufferGeometry();
+  m.setAttribute('position', new THREE.BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); m.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return m;
+}
+// 외곽선: 뒷면만 그린 검은 껍데기를 법선 방향으로 살짝 부풀림 (모서리가 갈라지지 않게 법선을 평균)
+const OUTLINE_MAT = {};
+function outlineMesh(geo, width){
+  const p = geo.attributes.position, acc = new Map(), keys = new Array(p.count);
+  const nrm = geo.attributes.normal;
+  for (let i = 0; i < p.count; i++){
+    const k = (p.getX(i) * 500 | 0) + ',' + (p.getY(i) * 500 | 0) + ',' + (p.getZ(i) * 500 | 0); keys[i] = k;
+    const a = acc.get(k) || [0, 0, 0]; a[0] += nrm.getX(i); a[1] += nrm.getY(i); a[2] += nrm.getZ(i); acc.set(k, a);
+  }
+  const out = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++){ const a = acc.get(keys[i]), l = Math.hypot(a[0], a[1], a[2]) || 1; out[i * 3] = a[0] / l; out[i * 3 + 1] = a[1] / l; out[i * 3 + 2] = a[2] / l; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', p); g.setAttribute('normal', new THREE.BufferAttribute(out, 3));
+  const key = width.toFixed(4);
+  if (!OUTLINE_MAT[key]){
+    const m = new THREE.MeshBasicMaterial({ color: 0x0a0807, side: THREE.BackSide });
+    m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position + normal * ' + key + ';'); };
+    m.userData.noShadow = true; OUTLINE_MAT[key] = m;
+  }
+  const mesh = new THREE.Mesh(g, OUTLINE_MAT[key]); mesh.castShadow = false; return mesh;
+}
+
+// ---------- 플레이어 기사 v2 ----------
+// 팔레트: 은빛 판갑 + 어두운 강철 + 낡은 가죽 + 진홍 천 + 바랜 금 장식
+const PALETTE_PLAYER = { steel: 0xc3c9cf, dark: 0x5f666c, leather: 0x5b4030, cloth: 0x8a2620, gold: 0xb8924c, eye: 0x111111 };
+function buildPlayerKnight(o){
+  const C = PALETTE_PLAYER, env = envTexture(), mtex = metalTexture(3, false), ctex = clothTexture(5);
+  const steel = new THREE.MeshStandardMaterial({ color: C.steel, map: mtex, metalness: .8, roughness: .34, envMap: env, envMapIntensity: .9 });
+  const dark = new THREE.MeshStandardMaterial({ color: C.dark, map: mtex, metalness: .7, roughness: .5, envMap: env, envMapIntensity: .6 });
+  const leather = new THREE.MeshStandardMaterial({ color: C.leather, map: ctex, roughness: .85, metalness: 0 });
+  const cloth = new THREE.MeshStandardMaterial({ color: C.cloth, map: ctex, roughness: .95, side: THREE.DoubleSide });
+  const gold = new THREE.MeshStandardMaterial({ color: C.gold, metalness: .9, roughness: .3, envMap: env, envMapIntensity: 1 });
+  const eyeM = new THREE.MeshBasicMaterial({ color: C.eye });
+  const blade = new THREE.MeshStandardMaterial({ color: 0xd4e0ea, metalness: .7, roughness: .26, envMap: env, envMapIntensity: .35, emissive: 0x000000 });
+  const OL = .016;   // 외곽선 두께
+  const root = new THREE.Group(), rig = new THREE.Group(), body = new THREE.Group();
+  root.add(rig); rig.position.y = .95; rig.add(body); body.position.y = -.95;
+
+  // 다리 (엉덩이 관절 기준, 아래로 -Y)
+  const hipL = new THREE.Group(), hipR = new THREE.Group();
+  hipL.position.set(0, .85, -.15); hipR.position.set(0, .85, .15); body.add(hipL, hipR);
+  for (const hp of [hipL, hipR]){
+    Parts()
+      .cyl(.1, .09, .36, 10, leather, 0, -.19, 0)              // 허벅지 (가죽)
+      .box(.08, .3, .19, steel, .09, -.19, 0, 0, 0, -.06)      // 허벅지 판
+      .sph(.085, steel, .05, -.42, 0, 0, 0, 0, 1, .85, 1)       // 무릎 덮개
+      .box(.04, .08, .12, steel, .12, -.42, 0)                   // 무릎 날개
+      .cyl(.085, .072, .32, 10, steel, 0, -.62, 0)               // 정강이
+      .box(.05, .26, .1, dark, .07, -.61, 0)                     // 정강이 능선
+      .box(.26, .09, .17, dark, .04, -.82, 0)                    // 철화
+      .box(.1, .06, .13, steel, .18, -.83, 0, 0, 0, -.2)         // 발끝
+      .cone(.05, .1, 6, steel, .26, -.84, 0, 0, 0, -Math.PI / 2) // 뾰족한 발끝
+      .build(hp, OL);
+  }
+  // 허리: 벨트·버클·판 치마
+  const waist = Parts()
+    .cyl(.29, .3, .12, 14, leather, 0, .9, 0, 0, 0, 0, .78, 1, 1.08)
+    .box(.05, .1, .12, gold, .23, .9, 0)
+    .cyl(.27, .31, .2, 14, dark, 0, .76, 0, 0, 0, 0, .78, 1, 1.05);
+  for (let i = 0; i < 6; i++){
+    const a = -1.25 + i * .5, x = Math.cos(a) * .25, z = Math.sin(a) * .3;
+    waist.box(.04, .2, .14, steel, x, .7, z, 0, -a, .18 * Math.cos(a));
+  }
+  waist.build(body, OL);
+
+  // 허리 위 (비틀기·숙이기 관절)
+  const spine = new THREE.Group(); spine.position.y = .95; body.add(spine);
+  Parts()
+    .cyl(.25, .27, .5, 14, dark, 0, .25, 0, 0, 0, 0, .8, 1, 1.05)         // 몸통 속
+    .sph(.31, steel, .04, .33, 0, 0, 0, 0, .78, .95, 1)                    // 가슴판 (둥글게)
+    .box(.035, .36, .03, gold, .275, .34, 0)                               // 가운데 능선
+    .box(.3, .1, .46, steel, .05, .06, 0, 0, 0, -.08)                      // 아랫배 판 1
+    .box(.28, .08, .42, steel, .07, -.02, 0, 0, 0, -.1)                    // 아랫배 판 2
+    .cyl(.14, .16, .1, 12, dark, .01, .61, 0)                              // 목 가리개
+    .torus(.15, .025, gold, .01, .57, 0, Math.PI / 2, 0, 0)                // 목 장식 테
+    .sph(.025, gold, .29, .48, -.1).sph(.025, gold, .29, .48, .1)          // 리벳
+    .build(spine, OL);
+  // 머리
+  const head = new THREE.Group(); head.position.set(.02, .77, 0); spine.add(head);
+  const hp = Parts()
+    .sph(.19, steel, 0, .02, 0, 0, 0, 0, 1, 1.08, .95)                     // 둥근 투구
+    .box(.07, .22, .27, steel, .15, -.01, 0)                               // 면갑
+    .cone(.1, .16, 8, steel, .22, -.05, 0, 0, 0, -Math.PI / 2, 1, 1, .9)   // 앞으로 튀어나온 면갑 코
+    .box(.02, .03, .22, eyeM, .19, .05, 0)                                 // 눈 틈
+    .box(.02, .015, .2, dark, .195, -.07, 0)                               // 숨구멍
+    .cyl(.17, .19, .08, 12, dark, -.01, -.14, 0)                           // 목 보호
+    .box(.03, .05, .3, gold, .1, .12, 0);                                  // 이마 띠
+  for (let i = 0; i < 6; i++){ const t = i / 5, a = -1.1 + t * 2.2; hp.box(.07, .07 + .05 * Math.sin(t * Math.PI), .05, cloth, Math.sin(a) * .17, .2 + Math.cos(a) * .06, 0, 0, 0, -a); }  // 붉은 깃털
+  hp.build(head, OL);
+  // 망토: 3조각이 이어져 펄럭임
+  const cape = new THREE.Group(); cape.position.set(-.27, .55, 0); spine.add(cape);
+  let par = cape; const capeSegs = [];
+  for (let i = 0; i < 3; i++){
+    const seg = new THREE.Group(); if (i) seg.position.y = -.38; par.add(seg);
+    const w = .6 + i * .04;
+    Parts().box(.03, .38, w, cloth, 0, -.19, 0).build(seg, OL * .7);
+    if (i === 2) Parts().box(.032, .04, w, gold, 0, -.37, 0).build(seg, 0);
+    capeSegs.push(seg); par = seg;
+  }
+  cape.userData.segs = capeSegs;
+
+  // 팔: Shoulder → UpperArm → ForeArm → Hand
+  function arm(side){
+    const sh = new THREE.Group(); sh.position.set(0, .57, side * .4); spine.add(sh);
+    const upper = new THREE.Group(); sh.add(upper);
+    Parts()
+      .hemi(.17, steel, 0, -.02, side * .03, 0, 0, side * .25, 1.05, .85, 1)  // 견갑 1단
+      .cyl(.16, .17, .05, 12, steel, 0, -.07, side * .03)                      // 견갑 2단
+      .cyl(.15, .16, .05, 12, dark, 0, -.12, side * .03)                       // 견갑 3단
+      .sph(.02, gold, .08, .1, side * .08)
+      .cyl(.072, .068, .22, 10, leather, 0, -.2, 0)                            // 위팔 (사슬 대신 가죽)
+      .build(upper, OL);
+    const el = new THREE.Group(); el.position.y = -.31; upper.add(el);
+    Parts()
+      .sph(.075, steel, 0, 0, 0)                                               // 팔꿈치 보호대
+      .cone(.06, .08, 6, steel, -.06, 0, 0, 0, 0, Math.PI / 2)
+      .cyl(.07, .062, .24, 10, steel, 0, -.14, 0)                              // 팔뚝 보호대
+      .cyl(.085, .07, .06, 10, dark, 0, -.26, 0)                               // 손목 커프
+      .build(el, OL);
+    const wr = new THREE.Group(); wr.position.y = -.3; el.add(wr);
+    const hand = Parts().box(.12, .11, .12, dark, 0, -.04, 0);
+    for (let i = 0; i < 4; i++) hand.box(.04, .035, .028, steel, .055, -.07, -.045 + i * .03);   // 손가락 마디
+    hand.build(wr, OL);
+    return { sh, upper, el, wr };
+  }
+  const armR = arm(1), armL = arm(-1);
+  // 장검: 손 기준 +X
+  const grip = new THREE.Group(); grip.position.set(0, -.05, 0); armR.wr.add(grip);
+  const L = o.blade;
+  Parts()
+    .cyl(.024, .024, .24, 8, leather, -.02, 0, 0, 0, 0, Math.PI / 2)
+    .sph(.04, gold, -.16, 0, 0)                                                // 폼멜
+    .box(.04, .04, .36, gold, .12, 0, 0)                                       // 가드
+    .sph(.028, gold, .12, 0, .19).sph(.028, gold, .12, 0, -.19)
+    .build(grip, OL);
+  const bladeG = new THREE.Group(); bladeG.position.x = .14; grip.add(bladeG);
+  Parts()
+    .box(L - .12, .028, .085, blade, (L - .12) / 2, 0, 0)
+    .box(L - .3, .034, .02, dark, (L - .3) / 2 + .04, 0, 0)                    // 가운데 홈
+    .box(.12, .028, .06, blade, L - .06, 0, 0, 0, Math.PI / 4, 0, 1.2, 1, .6)  // 칼끝
+    .build(bladeG, OL * .6);
+  const tip = new THREE.Object3D(); tip.position.x = L; bladeG.add(tip);
+  const base = new THREE.Object3D(); base.position.x = .18; bladeG.add(base);
+  // 둥근 방패: 왼손, 면이 팔뚝 방향(앞)을 향함
+  const shieldG = new THREE.Group(); shieldG.position.set(.04, -.14, -.04); armL.wr.add(shieldG);
+  const sp = Parts()
+    .cyl(.3, .3, .045, 20, leather, 0, 0, 0)
+    .torus(.3, .028, steel, 0, 0, 0, Math.PI / 2, 0, 0)
+    .sph(.06, steel, 0, -.03, 0, 0, 0, 0, 1, .5, 1)
+    .box(.42, .012, .07, cloth, 0, -.026, 0).box(.07, .012, .42, cloth, 0, -.026, 0);
+  for (let i = 0; i < 8; i++){ const a = i / 8 * TAU; sp.sph(.016, gold, Math.cos(a) * .25, -.026, Math.sin(a) * .25); }
+  sp.build(shieldG, OL);
+
+  root.scale.setScalar(o.scale);
+  scene.add(root);
+  const armorMats = [steel, dark];
+  const k = { root, rig, body, spine, hipL, hipR, armR, armL, bladeG, tip, base, eyeM, cape, steel: blade, shield: shieldG, walk: 0, o,
+    armor: { emissive: { setHex: h => armorMats.forEach(m => m.emissive.setHex(h)) } } };
+  k.rest = mkPose(o.rest || {}, POSE_REST);
+  k.cur = clonePose(k.rest);
+  k.trail = makeTrail(0xf3e3c3);
+  return k;
+}
+
+// ---------- 보스 잿빛 기사 아르논 v2 ----------
+// 팔레트: 잿빛 강철 + 검은 무쇠 + 녹 + 핏빛 넝마 + 갑옷 틈의 불씨
+const PALETTE_BOSS = { steel: 0x77706a, dark: 0x2c2825, rust: 0x7a4a2a, cloth: 0x3c1d18, horn: 0x231f1c, ember: 0xff6a20 };
+function buildBossKnight(o){
+  const C = PALETTE_BOSS, env = envTexture(), mtex = metalTexture(11, true), ctex = clothTexture(13);
+  const steel = new THREE.MeshStandardMaterial({ color: C.steel, map: mtex, metalness: .7, roughness: .5, envMap: env, envMapIntensity: .6 });
+  const dark = new THREE.MeshStandardMaterial({ color: C.dark, map: mtex, metalness: .6, roughness: .62, envMap: env, envMapIntensity: .45 });
+  const rust = new THREE.MeshStandardMaterial({ color: C.rust, map: mtex, metalness: .35, roughness: .8 });
+  const cloth = new THREE.MeshStandardMaterial({ color: C.cloth, map: ctex, roughness: .95, side: THREE.DoubleSide });
+  const horn = new THREE.MeshStandardMaterial({ color: C.horn, roughness: .6, metalness: .2 });
+  const ember = new THREE.MeshStandardMaterial({ color: 0x1a0d08, emissive: C.ember, emissiveIntensity: .25, roughness: 1 });
+  ember.userData.noShadow = true;
+  const eyeM = new THREE.MeshBasicMaterial({ color: 0xd8cfbc });
+  const blade = new THREE.MeshStandardMaterial({ color: 0x9a948c, map: metalTexture(17, true), metalness: .75, roughness: .45, envMap: env, envMapIntensity: .5, emissive: 0x000000 });
+  const OL = .012;
+  const root = new THREE.Group(), rig = new THREE.Group(), body = new THREE.Group();
+  root.add(rig); rig.position.y = .95; rig.add(body); body.position.y = -.95;
+
+  // 다리
+  const hipL = new THREE.Group(), hipR = new THREE.Group();
+  hipL.position.set(0, .85, -.16); hipR.position.set(0, .85, .16); body.add(hipL, hipR);
+  for (const hp of [hipL, hipR]){
+    Parts()
+      .cyl(.12, .11, .36, 10, dark, 0, -.19, 0)
+      .box(.09, .32, .22, steel, .1, -.19, 0, 0, 0, -.05)
+      .sph(.1, steel, .05, -.42, 0, 0, 0, 0, 1, .85, 1)
+      .cone(.04, .12, 6, dark, .16, -.42, 0, 0, 0, -Math.PI / 2)          // 무릎 가시
+      .cyl(.1, .085, .32, 10, steel, 0, -.62, 0)
+      .box(.06, .28, .12, rust, .08, -.61, 0)
+      .box(.3, .11, .2, dark, .05, -.82, 0)
+      .box(.12, .07, .17, steel, .2, -.84, 0, 0, 0, -.15)
+      .build(hp, OL);
+  }
+  // 허리: 넝마 치마 (길이가 제각각인 천 조각)
+  const waist = Parts()
+    .cyl(.31, .32, .13, 14, dark, 0, .9, 0, 0, 0, 0, .8, 1, 1.08)
+    .box(.06, .12, .16, rust, .25, .9, 0);
+  const RR = rng(21);
+  for (let i = 0; i < 12; i++){
+    const a = i / 12 * TAU, len = .32 + RR() * .2, x = Math.cos(a) * .26, z = Math.sin(a) * .31;
+    waist.box(.03, len, .14, cloth, x, .82 - len / 2, z, 0, -a, .1 * Math.cos(a));
+  }
+  waist.build(body, OL);
+
+  // 허리 위
+  const spine = new THREE.Group(); spine.position.y = .95; body.add(spine);
+  const tp = Parts()
+    .cyl(.27, .29, .5, 14, dark, 0, .25, 0, 0, 0, 0, .82, 1, 1.05)
+    .sph(.33, steel, .03, .34, 0, 0, 0, 0, .8, .95, 1.02)
+    .box(.3, .1, .5, dark, .05, .04, 0, 0, 0, -.06);
+  for (let i = 0; i < 4; i++){                                              // 갈비뼈 판 + 그 사이 불씨
+    const y = .14 + i * .1;
+    tp.box(.07, .05, .5 - i * .03, dark, .25 - i * .005, y, 0, 0, 0, -.12);
+    tp.box(.02, .025, .36 - i * .03, ember, .275, y + .045, 0);
+  }
+  tp.box(.02, .3, .03, ember, .285, .3, 0)                                  // 가운데 금
+    .cyl(.17, .2, .16, 12, dark, 0, .62, 0);                                // 높은 목깃
+  for (let i = 0; i < 5; i++){ const a = -1 + i * .5; tp.cone(.035, .14, 5, horn, Math.cos(a) * .17 - .02, .74, Math.sin(a) * .17, 0, 0, 0); }
+  tp.build(spine, OL);
+  // 머리: 각진 투구 + 휘어진 뿔
+  const head = new THREE.Group(); head.position.set(.02, .79, 0); spine.add(head);
+  const hd = Parts()
+    .box(.3, .34, .3, steel, 0, .02, 0)
+    .box(.24, .06, .26, dark, -.01, .21, 0)                                // 투구 꼭대기
+    .box(.05, .3, .28, dark, .16, -.01, 0)                                  // 면갑
+    .box(.03, .035, .22, eyeM, .19, .05, 0)                                 // 눈 틈
+    .box(.03, .2, .03, eyeM, .19, -.06, 0)                                  // 세로 틈
+    .box(.1, .2, .05, steel, .1, -.06, .15, 0, .3, 0).box(.1, .2, .05, steel, .1, -.06, -.15, 0, -.3, 0)   // 볼 보호대
+    .cyl(.17, .2, .1, 12, dark, -.02, -.16, 0);
+  for (const sd of [-1, 1]){                                                // 뿔: 바깥·위로 뻗다가 앞으로 휨
+    const pts = [[-.02, .12, .14], [-.05, .22, .26], [-.04, .36, .35], [.03, .49, .38], [.14, .57, .34], [.24, .59, .27]].map(p => [p[0], p[1], p[2] * sd]);
+    const rad = [.06, .052, .042, .032, .022, .012, .004];
+    for (let i = 0; i < pts.length - 1; i++) hd.link(pts[i], pts[i + 1], rad[i], rad[i + 1], horn);
+  }
+  hd.build(head, OL);
+  // 망토: 넓고 끝이 찢어진 3조각
+  const cape = new THREE.Group(); cape.position.set(-.29, .55, 0); spine.add(cape);
+  let par = cape; const capeSegs = [];
+  for (let i = 0; i < 3; i++){
+    const seg = new THREE.Group(); if (i) seg.position.y = -.4; par.add(seg);
+    const w = .7 + i * .06, cp = Parts();
+    if (i < 2) cp.box(.03, .4, w, cloth, 0, -.2, 0);
+    else for (let j = 0; j < 6; j++){ const l = .22 + RR() * .3; cp.box(.03, l, w / 6 - .01, cloth, 0, -l / 2, -w / 2 + (j + .5) * w / 6); }
+    cp.build(seg, OL * .7); capeSegs.push(seg); par = seg;
+  }
+  cape.userData.segs = capeSegs;
+
+  // 팔
+  function arm(side){
+    const sh = new THREE.Group(); sh.position.set(0, .57, side * .43); spine.add(sh);
+    const upper = new THREE.Group(); sh.add(upper);
+    const up = Parts()
+      .hemi(.21, steel, 0, -.02, side * .04, 0, 0, side * .3, 1.1, .9, 1.05)
+      .cyl(.19, .2, .06, 12, dark, 0, -.08, side * .04)
+      .cyl(.18, .19, .06, 12, rust, 0, -.14, side * .04)
+      .cyl(.085, .08, .22, 10, dark, 0, -.21, 0);
+    for (let i = 0; i < 3; i++) up.cone(.035, .16 - i * .03, 5, horn, -.06 + i * .06, .1 - i * .02, side * (.12 + i * .02), side * -.5, 0, 0);   // 견갑 가시
+    up.build(upper, OL);
+    const el = new THREE.Group(); el.position.y = -.31; upper.add(el);
+    Parts()
+      .sph(.085, steel, 0, 0, 0)
+      .cone(.04, .14, 5, horn, -.1, 0, 0, 0, 0, Math.PI / 2)
+      .cyl(.08, .07, .24, 10, steel, 0, -.14, 0)
+      .cyl(.095, .08, .07, 10, dark, 0, -.26, 0)
+      .build(el, OL);
+    const wr = new THREE.Group(); wr.position.y = -.3; el.add(wr);
+    const hand = Parts().box(.14, .12, .14, dark, 0, -.04, 0);
+    for (let i = 0; i < 4; i++) hand.box(.045, .04, .032, steel, .065, -.08, -.05 + i * .033);
+    hand.build(wr, OL);
+    return { sh, upper, el, wr };
+  }
+  const armR = arm(1), armL = arm(-1);
+  // 대검: 넓고 녹슨 날
+  const grip = new THREE.Group(); grip.position.set(0, -.05, 0); armR.wr.add(grip);
+  const L = o.blade;
+  Parts()
+    .cyl(.03, .03, .34, 8, cloth, -.05, 0, 0, 0, 0, Math.PI / 2)
+    .torus(.045, .015, dark, -.25, 0, 0)
+    .box(.06, .06, .5, dark, .13, 0, 0)
+    .cone(.03, .1, 5, dark, .13, 0, .29, Math.PI / 2, 0, 0).cone(.03, .1, 5, dark, .13, 0, -.29, -Math.PI / 2, 0, 0)
+    .build(grip, OL);
+  const bladeG = new THREE.Group(); bladeG.position.x = .16; grip.add(bladeG);
+  Parts()
+    .box(L - .2, .04, .2, blade, (L - .2) / 2, 0, 0)
+    .box(L - .4, .046, .05, dark, (L - .4) / 2 + .06, 0, 0)
+    .box(L - .2, .03, .03, steel, (L - .2) / 2, 0, .105).box(L - .2, .03, .03, steel, (L - .2) / 2, 0, -.105)   // 날 가장자리
+    .box(.2, .04, .14, blade, L - .1, 0, 0, 0, Math.PI / 4, 0, 1.1, 1, .75)
+    .build(bladeG, OL * .6);
+  const tip = new THREE.Object3D(); tip.position.x = L; bladeG.add(tip);
+  const base = new THREE.Object3D(); base.position.x = .2; bladeG.add(base);
+
+  root.scale.setScalar(o.scale);
+  scene.add(root);
+  const armorMats = [steel, dark, rust];
+  const k = { root, rig, body, spine, hipL, hipR, armR, armL, bladeG, tip, base, eyeM, cape, steel: blade, shield: null, ember, walk: 0, o,
+    armor: { emissive: { setHex: h => armorMats.forEach(m => m.emissive.setHex(h)) } } };
+  k.rest = mkPose(o.rest || {}, POSE_REST);
+  k.cur = clonePose(k.rest);
+  k.trail = makeTrail(0xf3e3c3);
+  return k;
 }
 
 function flatMesh(geo, color, opacity){
@@ -640,8 +977,8 @@ function initScene(){
     braziers.push({ flame, light, seed: R() * 10, x: px, z: pz });
   }
 
-  playerRig = buildKnight({ scale: 1.1, armor: 0x8f989d, dark: 0x3b342e, cape: 0x2e211a, eye: 0x161616, shield: true, plume: 0x7a2a22, guard: .3, bladeW: .09, blade: 1.35 });
-  bossRig = buildKnight({ scale: 2.25, armor: 0x5b564f, dark: 0x262320, cape: 0x3a1f1a, eye: 0xd8cfbc, horns: true, guard: .46, bladeW: .2, blade: 1.95,
+  playerRig = buildPlayerKnight({ scale: 1.1, blade: 1.35 });
+  bossRig = buildBossKnight({ scale: 2.25, blade: 1.95,
     rest: { rs: [-.2, -.1, .45], re: .7, rw: [0, 0, -1.75], ls: [.3, 0, .35], le: .45 } });
   bossLight = new THREE.PointLight(0xff7a30, 0, 10, 2); bossLight.position.set(.2, .65, 0); bossRig.spine.add(bossLight);
   healLight = new THREE.PointLight(0xe8b45a, 0, 5, 2); healLight.position.set(.05, -.1, 0); playerRig.armL.wr.add(healLight);
@@ -1414,6 +1751,7 @@ function poseKnight(k, o){
   const amp = Math.min(1, spd / 120) * .55;
   k.hipL.rotation.z = Math.sin(k.walk) * amp; k.hipR.rotation.z = -Math.sin(k.walk) * amp;
   k.cape.rotation.z = -.08 - Math.min(.5, spd * .002) + Math.sin(now * 3 + k.o.scale) * .04;
+  (k.cape.userData.segs || []).forEach((sg, i) => { if (i) sg.rotation.z = -Math.min(.25, spd * .0012) * i + Math.sin(now * (3.2 + i) + i * 1.3 + k.o.scale) * (.05 + .03 * i); });
 }
 
 function updateScene(dt){
@@ -1453,7 +1791,7 @@ function updateScene(dt){
   poseKnight(pr, { visible: game.state !== 'title', x: p.x, y: p.y, heading, rz, rx, rigY, lift, speed: pSpeed, dt, stride: 3.4 });
   driveRig(pr, target, rate, dt);
   pr.root.updateMatrixWorld(true);
-  updateTrail(pr, trailOn && game.state !== 'title', 1);
+  updateTrail(pr, trailOn && game.state !== 'title', .6);
 
   // ---- 보스
   const b = B, br = bossRig, ph = b.D.phases[b.phase];
@@ -1489,13 +1827,14 @@ function updateScene(dt){
   br.armor.emissive.setHex(b.flash > 0 ? 0x553a2a : (phase2 ? 0x2a0c02 : 0x000000));
   br.eyeM.color.setHex(phase2 ? 0xff8a3d : 0xd8cfbc);
   br.steel.emissive.setHex(phase2 ? 0x3a1203 : 0x000000);
+  if (br.ember) br.ember.emissiveIntensity = b.state === 'dead' ? Math.max(0, .25 - b.t * .1) : phase2 ? 1.6 + Math.sin(now * 6) * .5 : .3 + Math.sin(now * 2) * .08;
   br.trail.col.setHex(phase2 ? 0xff9a50 : 0xf3e3c3);
   bossLight.intensity = phase2 && b.state !== 'dead' ? 2.2 + Math.sin(now * 7) * .5 : 0;
   poseKnight(br, { visible: !(b.state === 'dead' && b.t > 4), x: b.x, y: b.y, heading: b.face + (b.state === 'stagger' ? .3 : 0),
     rz: brz, rx: brx, rigY: bRigY, lift: b.z * 3.6 - sink, speed: b.state === 'dead' ? 0 : Math.hypot(b.vx, b.vy), dt, stride: 1.6 });
   driveRig(br, bTarget, bRate, dt);
   br.root.updateMatrixWorld(true);
-  updateTrail(br, bTrail, 1);
+  updateTrail(br, bTrail, .4);
 
   // ---- 공격 예고
   for (const key of ['cone', 'rect', 'ring', 'fill', 'nova']) tele[key].g.visible = false;
