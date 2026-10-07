@@ -89,6 +89,9 @@ tr.mine td{background:rgba(201,164,92,.09)}
 .mode button[aria-pressed="true"]{background:var(--gold);color:#16120d;font-weight:700}
 .mode button:focus-visible{outline:2px solid var(--bone);outline-offset:1px}
 .hright{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sndbtn{font:inherit;font-size:12px;font-weight:500;color:var(--bone);background:transparent;border:1px solid var(--line);padding:5px 12px;cursor:pointer}
+.sndbtn[aria-pressed="false"]{color:var(--dim);text-decoration:line-through}
+.sndbtn:focus-visible{outline:2px solid var(--bone);outline-offset:1px}
 /* 모바일 모드: 게임 화면이 전체 화면을 채움 (가로·세로 모두) */
 html.mobile,html.mobile body{height:100%;overflow:hidden;overscroll-behavior:none}
 html.mobile .frame{position:fixed;inset:0;z-index:50;border:0;box-shadow:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -102,7 +105,8 @@ html.mobile canvas#game{height:100%;aspect-ratio:auto}
 .pad button.on{background:rgba(201,164,92,.42);border-color:var(--gold)}
 .pad button small{display:block;font-size:10px;font-weight:500;color:var(--dim)}
 .pad .b-light{right:6px;bottom:6px;width:92px;height:92px;font-size:15px}
-.pad .b-heavy{right:112px;bottom:4px;width:64px;height:64px}
+.pad .b-parry{right:112px;bottom:4px;width:64px;height:64px;color:var(--gold)}
+.pad .b-heavy{right:186px;bottom:40px;width:56px;height:56px}
 .pad .b-roll{right:10px;bottom:110px;width:68px;height:68px}
 .pad .b-dash{right:96px;bottom:86px;width:58px;height:58px}
 .pad .b-heal{right:170px;bottom:110px;width:52px;height:52px;color:#e8b45a}
@@ -136,7 +140,8 @@ html.mobile.show-board .bclose{display:inline-block}
   <header>
     <h1>OA Soul<small>CHAPTER I · ASHEN KNIGHT</small></h1>
     <div class="hright">
-      <div class="ver">3D 프로토타입 · 락온 3인칭 시점 · 순위표</div>
+      <div class="ver"><b id="verTag">BETA 0.2</b> · 락온 3인칭 시점 · 순위표</div>
+      <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
       <div class="mode" role="group" aria-label="조작 모드">
         <button id="modePc" aria-pressed="true">PC</button>
         <button id="modeMobile" aria-pressed="false">모바일</button>
@@ -153,11 +158,13 @@ html.mobile.show-board .bclose{display:inline-block}
       <div class="pad" id="pad" hidden>
         <button class="b-light" data-act="light">공격</button>
         <button class="b-heavy" data-act="heavy">강공격</button>
+        <button class="b-parry" data-act="parry">패링</button>
         <button class="b-roll" data-act="roll">구르기</button>
         <button class="b-dash" data-act="dash">대쉬</button>
         <button class="b-heal" data-act="heal">에스트</button>
       </div>
       <div class="mtop">
+        <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
         <button id="mBoard">순위</button>
         <button id="mExit">PC 모드</button>
       </div>
@@ -189,10 +196,12 @@ html.mobile.show-board .bclose{display:inline-block}
     <span><kbd>K</kbd> / 우클릭 강공격</span>
     <span><kbd>Space</kbd> 구르기</span>
     <span><kbd>L</kbd> + 이동 대쉬</span>
+    <span><kbd>U</kbd> / <kbd>Q</kbd> 패링</span>
     <span><kbd>E</kbd> 에스트 회복</span>
     <span><kbd>R</kbd> 재도전</span>
+    <span><kbd>M</kbd> 소리 켜기/끄기</span>
   </div>
-  <p class="note">PC는 키보드로, 휴대폰·태블릿은 오른쪽 위 <b>모바일</b> 모드로 플레이합니다. 카메라는 항상 보스를 바라보는 락온 상태입니다. 구르기 초반에는 무적 시간이 있고, 보스에게 피해를 계속 주면 자세가 무너져 큰 피해를 받습니다.<br>점수 = 보스에게 준 피해 + 처치 보너스 1,000 + 남은 에스트 1병당 150 (보스를 쓰러뜨렸을 때만). 난이도는 타이틀 화면에서 고릅니다.</p>
+  <p class="note">PC는 키보드로, 휴대폰·태블릿은 오른쪽 위 <b>모바일</b> 모드로 플레이합니다. 카메라는 항상 보스를 바라보는 락온 상태입니다. 구르기 초반에는 무적 시간이 있고, 보스의 베기·돌진은 맞기 직전에 패링하면 보스가 무너져 치명타를 넣을 수 있습니다(점프 내려찍기·충격파는 패링 불가). 보스에게 피해를 계속 주면 자세가 무너져 큰 피해를 받습니다.<br>점수 = 보스에게 준 피해 + 처치 보너스 1,000 + 남은 에스트 1병당 150 (보스를 쓰러뜨렸을 때만). 난이도는 타이틀 화면에서 고릅니다.</p>
 
   <section class="board" aria-labelledby="boardTitle">
     <header>
@@ -219,6 +228,8 @@ html.mobile.show-board .bclose{display:inline-block}
 //  ★ 공개 사이트(GitHub) 설정 — Supabase 프로젝트 값. 비워 두면 순위는 이 브라우저에만 저장
 //    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
+// 게임 버전 (화면 표시용). 버전 기록은 CHANGELOG.md 참고
+const GAME_VERSION = 'BETA 0.2';
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
 
@@ -232,25 +243,28 @@ const BOSSES = {
     armor: '#4b4741', cape: '#3a1f1a', eye: '#d8cfbc',
     phases: [
       { until: 0.5, tempo: 1.0,  speedMul: 1.0,
-        patterns: { slash: 3, double: 2.5, charge: 2, leap: 1.5 } },
+        patterns: { slash: 3, double: 2.5, smash: 1.5, pierce: 1.5, charge: 2, leap: 1.5 } },
       { until: 0,   tempo: 1.18, speedMul: 1.25, eye: '#ff8a3d', glow: '#e0703a',
-        patterns: { double: 2, flurry: 2.5, chargeSlash: 2, leap: 1.5, nova: 2 } },
+        patterns: { double: 2, flurry: 2.5, smash: 1.5, pierce: 1.5, chargeSlash: 2, leap: 1.5, nova: 2 } },
     ],
   },
 };
 
 // 공격 패턴: range = 사용 가능한 거리 [최소, 최대], steps = 연속 동작, rec = 후딜(반격 기회)
 const PATTERNS = {
-  slash:  { range:[0,150],  rec:.95, steps:[ {type:'swing', wind:.7, arc:2.3, range:115, dmg:26, lunge:260, track:3.2} ] },
-  double: { range:[0,170],  rec:1.0, steps:[ {type:'swing', wind:.65, arc:2.3, range:115, dmg:24, lunge:240, track:3.2},
-                                              {type:'swing', wind:.4,  arc:2.3, range:115, dmg:22, lunge:240, track:4.5} ] },
-  flurry: { range:[0,170],  rec:1.3, steps:[ {type:'swing', wind:.55, arc:2.0, range:110, dmg:20, lunge:220, track:3.5},
-                                              {type:'swing', wind:.3,  arc:2.0, range:110, dmg:20, lunge:220, track:4.5},
-                                              {type:'swing', wind:.3,  arc:2.0, range:110, dmg:20, lunge:220, track:4.5},
-                                              {type:'swing', wind:.6,  arc:3.1, range:135, dmg:32, lunge:300, track:3.0} ] },
+  // motion: MOTIONS의 공격 궤적 (overhead 내려치기, rising 올려치기, slashR/slashL 가로 베기, diagonal 대각선, thrust 찌르기)
+  slash:  { range:[0,150],  rec:.95, steps:[ {type:'swing', motion:'diagonal', wind:.7, arc:1.9, range:115, dmg:26, lunge:260, track:3.2} ] },
+  double: { range:[0,170],  rec:1.0, steps:[ {type:'swing', motion:'slashR', wind:.65, arc:2.3, range:115, dmg:24, lunge:240, track:3.2},
+                                              {type:'swing', motion:'slashL', wind:.4,  arc:2.3, range:115, dmg:22, lunge:240, track:4.5} ] },
+  flurry: { range:[0,170],  rec:1.3, steps:[ {type:'swing', motion:'diagonal', wind:.55, arc:1.8, range:110, dmg:20, lunge:220, track:3.5},
+                                              {type:'swing', motion:'slashL', wind:.3,  arc:2.1, range:110, dmg:20, lunge:220, track:4.5},
+                                              {type:'swing', motion:'thrust', wind:.3,  arc:.55, range:130, dmg:22, lunge:360, track:4.5},
+                                              {type:'swing', motion:'overhead', wind:.6, arc:1.0, range:135, dmg:34, lunge:220, track:3.0} ] },
+  smash:  { range:[0,160],  rec:1.2, steps:[ {type:'swing', motion:'overhead', wind:.95, arc:.95, range:125, dmg:36, lunge:180, track:2.6} ] },
+  pierce: { range:[90,230], rec:1.0, steps:[ {type:'swing', motion:'thrust', wind:.6, arc:.5, range:150, dmg:28, lunge:520, track:4} ] },
   charge: { range:[170,999], rec:1.0, steps:[ {type:'dash', wind:.8, speed:640, dur:.5, dmg:30} ] },
   chargeSlash: { range:[150,999], rec:1.1, steps:[ {type:'dash', wind:.7, speed:660, dur:.45, dmg:28},
-                                                   {type:'swing', wind:.35, arc:2.6, range:120, dmg:26, lunge:200, track:6} ] },
+                                                   {type:'swing', motion:'rising', wind:.35, arc:1.2, range:120, dmg:26, lunge:200, track:6} ] },
   leap:   { range:[140,999], rec:1.05, steps:[ {type:'leap', wind:.4, air:.85, radius:100, dmg:36} ] },
   nova:   { range:[0,300],  rec:.75, steps:[ {type:'nova', wind:1.0, speed:260, thick:24, dmg:24} ] },
 };
@@ -266,11 +280,17 @@ const DIFF_KEYS = Object.keys(DIFFICULTY);
 const DIFF = () => DIFFICULTY[game.diff] || DIFFICULTY.normal;
 
 // 플레이어 공격
+// 패링: 보스의 베기·돌진을 정확한 타이밍에 받아치면 보스가 무너지고, 그때 치는 첫 공격은 치명타
+//   start~end: 받아치기 성공 구간(초), dur: 전체 동작 시간(빗나가면 이만큼 무방비), cost: 스태미나
+//   점프 내려찍기·충격파·포효는 패링할 수 없음
+const PARRY = { cost: 15, start: .04, end: .24, dur: .5, riposte: 4, arc: 1.75 };
+
 const PATK = {
   light: { cost:18, wind:.13, active:.1,  rec:.26, dmg:24, poise:22, range:56, arc:2.0, lunge:220, len:42 },
   heavy: { cost:34, wind:.45, active:.13, rec:.42, dmg:55, poise:60, range:64, arc:2.4, lunge:260, len:50 },
 };
 const P_SPEED = 175;
+const PLAYER_CHAIN = { light: ['diagonal', 'slashL', 'thrust'], heavy: ['overhead', 'rising'] };
 const SPRINT = { mul: 1.65, drain: 24, resume: 20 };  // 대쉬: 속도 배율, 초당 스태미나 소모, 바닥난 뒤 다시 뛸 수 있는 스태미나
 
 // =====================================================================
@@ -319,6 +339,87 @@ function keepIn(o){
 }
 function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
   t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// =====================================================================
+//  공격 모션 — 관절 자세(Pose)와 공격 궤적(MOTIONS)
+//  자세 값 (라디안):
+//    rs/ls = 오른/왼 어깨 [x: 바깥(-)·안쪽(+)으로 벌리기, y: 팔을 왼쪽(+)·오른쪽(-)으로 돌리기, z: 앞으로 들어올리기(+)]
+//    re/le = 팔꿈치 굽히기,  rw/lw = 손목 [x: 칼날 비틀기, y: 좌우 꺾기, z: 위(+)·아래(-) 꺾기]
+//    tw = 허리 비틀기(+ 왼쪽으로), ln = 상체 숙이기(- 앞으로)
+//  공격 궤적: wind(예비동작 끝 자세) → active(휘두르는 동안 지나가는 자세들) → 다시 기본 자세
+//  sweep: 판정이 휩쓰는 방향 (+1 왼→오, -1 오→왼, 0 = 고정된 부채꼴 판정)
+// =====================================================================
+const POSE_REST = { rs: [-.15, -.1, .55], re: 1.05, rw: [0, 0, -.75], ls: [.15, -.35, .85], le: 1.3, lw: [0, 0, 0], tw: 0, ln: 0 };
+function mkPose(p, b){ return { rs: p.rs || b.rs, re: p.re ?? b.re, rw: p.rw || b.rw, ls: p.ls || b.ls, le: p.le ?? b.le, lw: p.lw || b.lw, tw: p.tw ?? b.tw, ln: p.ln ?? b.ln }; }
+const clonePose = p => ({ rs: p.rs.slice(), re: p.re, rw: p.rw.slice(), ls: p.ls.slice(), le: p.le, lw: p.lw.slice(), tw: p.tw, ln: p.ln });
+const lv = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+function lerpPose(a, b, t){ return { rs: lv(a.rs, b.rs, t), re: lerp(a.re, b.re, t), rw: lv(a.rw, b.rw, t), ls: lv(a.ls, b.ls, t), le: lerp(a.le, b.le, t), lw: lv(a.lw, b.lw, t), tw: lerp(a.tw, b.tw, t), ln: lerp(a.ln, b.ln, t) }; }
+const smooth = t => t * t * (3 - 2 * t);
+// 참고: 칼날이 앞을 기준으로 위로 향하는 각도 ≈ 어깨 z + 팔꿈치 + 손목 z  (0 = 수평으로 앞, +1.57 = 수직 위, -1.57 = 수직 아래)
+
+const MOTIONS = {
+  // 위에서 내려치기: 칼을 머리 뒤로 넘겼다가 앞 아래로
+  overhead: { sweep: 0, arcMul: .7, rangeAdd: 0,
+    wind:   { rs: [-.15, .05, 2.7], re: .9, rw: [0, 0, -.3], tw: -.1, ln: .22 },
+    active: [{ rs: [-.12, .12, 2.0], re: .35, rw: [0, 0, -.75], tw: .05, ln: -.05 },
+             { rs: [-.08, .2, .95], re: .1, rw: [0, 0, -1.5], tw: .12, ln: -.42 }] },
+  // 아래에서 올려치기: 앞 아래에서 머리 위로
+  rising:   { sweep: 0, arcMul: .7, rangeAdd: 0,
+    wind:   { rs: [-.3, -.35, .1], re: .3, rw: [0, 0, -1.7], tw: -.45, ln: -.3 },
+    active: [{ rs: [-.22, -.1, 1.2], re: .15, rw: [0, 0, -.95], tw: -.1, ln: -.1 },
+             { rs: [-.18, .15, 2.6], re: .25, rw: [0, 0, -.55], tw: .2, ln: .2 }] },
+  // 오른쪽 → 왼쪽 가로 베기: 팔을 수평으로 뻗고 허리째 돌림
+  slashR:   { sweep: -1, arcMul: 1, rangeAdd: 0,
+    wind:   { rs: [-.05, -1.35, 1.45], re: .2, rw: [0, 0, -1.5], tw: -.65, ln: 0 },
+    active: [{ rs: [0, 0, 1.5], re: .1, rw: [0, 0, -1.55], tw: 0, ln: -.12 },
+             { rs: [.05, 1.25, 1.42], re: .2, rw: [0, 0, -1.5], tw: .6, ln: -.05 }] },
+  // 왼쪽 → 오른쪽 역베기
+  slashL:   { sweep: 1, arcMul: 1, rangeAdd: 0,
+    wind:   { rs: [.15, 1.1, 1.4], re: .35, rw: [0, 0, -1.6], tw: .6, ln: 0 },
+    active: [{ rs: [0, 0, 1.5], re: .1, rw: [0, 0, -1.55], tw: 0, ln: -.12 },
+             { rs: [-.1, -1.3, 1.45], re: .2, rw: [0, 0, -1.5], tw: -.55, ln: -.05 }] },
+  // 오른쪽 위 → 왼쪽 아래 대각선
+  diagonal: { sweep: -1, arcMul: .85, rangeAdd: 0,
+    wind:   { rs: [-.3, -.85, 2.4], re: .25, rw: [0, 0, -.75], tw: -.5, ln: .12 },
+    active: [{ rs: [-.1, -.05, 1.6], re: .15, rw: [0, 0, -1.45], tw: 0, ln: -.1 },
+             { rs: [.1, .9, .8], re: .15, rw: [0, 0, -1.55], tw: .5, ln: -.35 }] },
+  // 찌르기: 칼을 허리 옆으로 당겼다가 일직선으로 뻗음
+  thrust:   { sweep: 0, arcMul: .4, rangeAdd: 10,
+    wind:   { rs: [-.3, -.3, -.3], re: 1.9, rw: [0, 0, -1.6], tw: -.5, ln: .08 },
+    active: [{ rs: [-.15, -.1, .9], re: .9, rw: [0, 0, -1.75], tw: -.1, ln: -.2 },
+             { rs: [0, .12, 1.5], re: .05, rw: [0, 0, -1.55], tw: .25, ln: -.38 }] },
+};
+// 공격이 아닐 때의 자세
+const POSES = {
+  sprint: { rs: [-.25, 0, -.5], re: .5, rw: [0, 0, -2.4], ls: [.25, 0, -.4], le: .6, ln: -.3 },
+  roll:   { rs: [-.2, 0, .8], re: 1.9, rw: [0, 0, -1.6], ls: [.2, 0, .8], le: 1.9, ln: -.45 },
+  hurt:   { rs: [-.7, 0, .2], re: .4, rw: [0, 0, -.9], ls: [.7, 0, .2], le: .4, ln: .3 },
+  heal:   { rs: [-.1, 0, .15], re: .5, rw: [0, 0, -1.9], ls: [.15, -.6, 2.3], le: 2.1, ln: .12 },
+  parry:  { rs: [-.25, -.25, .35], re: 1.2, rw: [0, 0, -1.0], ls: [.1, -.55, 1.45], le: .35, lw: [0, 0, 0], tw: -.35, ln: -.12 },
+  dead:   { rs: [-.3, 0, .1], re: .2, rw: [0, 0, -1.5], ls: [.3, 0, .1], le: .2, ln: .2 },
+  // 보스 전용
+  roar:   { rs: [-1.1, 0, .9], re: .4, rw: [0, 0, -.9], ls: [1.1, 0, .9], le: .4, tw: 0, ln: .35 },
+  stagger:{ rs: [-.3, 0, .15], re: .3, rw: [0, 0, -1.85], ls: [.4, 0, .3], le: .3, ln: -.35 },
+  plant:  { rs: [-.1, .3, .95], re: .3, rw: [0, 0, -2.8], ls: [.2, -.4, 1.0], le: .5, ln: -.4 },
+  dashWind: { rs: [-.3, -.3, -.3], re: 1.9, rw: [0, 0, -1.6], tw: -.5, ln: -.2 },
+  dashRun:  { rs: [-.2, -.2, .2], re: .4, rw: [0, 0, -1.0], tw: -.2, ln: -.45 },
+};
+function motionPose(rest, mo, phase, k){
+  if (phase === 'wind') return lerpPose(rest, mkPose(mo.wind, rest), easeOut(k));
+  const path = [mo.wind, ...mo.active].map(p => mkPose(p, rest));
+  if (phase === 'active'){
+    const f = smooth(clamp(k, 0, 1)) * (path.length - 1), i = Math.min(path.length - 2, Math.floor(f));
+    return lerpPose(path[i], path[i + 1], f - i);
+  }
+  return lerpPose(path[path.length - 1], rest, smooth(clamp(k, 0, 1)));
+}
+function applyPose(k, p){
+  k.armR.sh.rotation.set(p.rs[0], p.rs[1], p.rs[2]); k.armR.el.rotation.set(0, 0, p.re); k.armR.wr.rotation.set(p.rw[0], p.rw[1], p.rw[2]);
+  k.armL.sh.rotation.set(p.ls[0], p.ls[1], p.ls[2]); k.armL.el.rotation.set(0, 0, p.le); k.armL.wr.rotation.set(p.lw[0], p.lw[1], p.lw[2]);
+  k.spine.rotation.set(0, p.tw, p.ln);
+}
+// 목표 자세로 부드럽게 따라감 (rate가 클수록 즉시)
+function driveRig(k, target, rate, dt){ k.cur = lerpPose(k.cur, target, 1 - Math.exp(-rate * dt)); applyPose(k, k.cur); }
 
 // =====================================================================
 //  3D 장면 — 게임 로직은 2D 평면(px)에서 그대로 계산하고, 화면만 3D로 그립니다.
@@ -379,7 +480,23 @@ function addMesh(parent, geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, 
   m.castShadow = shadow; m.receiveShadow = shadow; parent.add(m); return m;
 }
 
-// 기사 모델: 상자 조립. 앞쪽 = 로컬 +X, 오른쪽 = +Z
+// 기사 모델: 상자 조립 + 관절 계층. 앞쪽 = 로컬 +X, 위 = +Y, 오른쪽 = +Z
+//   body ─ hips(다리) / spine(허리 위: 몸통·머리·망토)
+//                         └ shoulderR → upperArm → elbowR(foreArm) → handR → 칼(grip → blade)
+//                         └ shoulderL → upperArm → elbowL(foreArm) → handL (+ 방패)
+function buildArm(parent, side, mats, o){
+  const z = side * .42;
+  const sh = new THREE.Group(); sh.position.set(0, .57, z); parent.add(sh);             // Shoulder
+  const upper = new THREE.Group(); sh.add(upper);                                        // UpperArm
+  addMesh(upper, BOX(.17, .32, .17), mats.dark, 0, -.15, 0);
+  addMesh(upper, BOX(.2, .12, .2), mats.armor, 0, -.04, 0);
+  const el = new THREE.Group(); el.position.y = -.31; upper.add(el);                     // ForeArm (팔꿈치)
+  addMesh(el, BOX(.16, .3, .16), mats.armor, 0, -.14, 0);
+  const wr = new THREE.Group(); wr.position.y = -.3; el.add(wr);                          // Hand (손목)
+  addMesh(wr, BOX(.15, .12, .15), mats.dark, 0, -.04, 0);
+  return { sh, upper, el, wr };
+}
+
 function buildKnight(o){
   const root = new THREE.Group(), rig = new THREE.Group(), body = new THREE.Group();
   root.add(rig); rig.position.y = .95; rig.add(body); body.position.y = -.95;
@@ -388,6 +505,8 @@ function buildKnight(o){
   const cloth = new THREE.MeshStandardMaterial({ color: o.cape, roughness: .95, side: THREE.DoubleSide });
   const eyeM = new THREE.MeshBasicMaterial({ color: o.eye });
   const steel = new THREE.MeshStandardMaterial({ color: 0xcfd3d6, metalness: .9, roughness: .22, emissive: 0x000000 });
+  const mats = { armor, dark };
+  // 다리
   const hipL = new THREE.Group(), hipR = new THREE.Group();
   hipL.position.set(0, .85, -.15); hipR.position.set(0, .85, .15); body.add(hipL, hipR);
   for (const hp of [hipL, hipR]){
@@ -395,15 +514,15 @@ function buildKnight(o){
     addMesh(hp, BOX(.23, .4, .23), armor, 0, -.62, 0);
     addMesh(hp, BOX(.32, .12, .23), dark, .05, -.84, 0);
   }
-  addMesh(body, BOX(.44, .62, .62), armor, 0, 1.2, 0);
-  addMesh(body, BOX(.12, .44, .5), armor, .2, 1.24, 0);
   addMesh(body, BOX(.48, .14, .66), dark, 0, .9, 0);
   addMesh(body, BOX(.46, .26, .6), dark, 0, .74, 0);
-  addMesh(body, BOX(.42, .18, .32), armor, 0, 1.56, -.42, -.28);
-  addMesh(body, BOX(.42, .18, .32), armor, 0, 1.56, .42, .28);
-  addMesh(body, BOX(.16, .5, .16), dark, 0, 1.22, -.43);
-  addMesh(body, BOX(.16, .5, .16), dark, .04, 1.22, .43);
-  const head = new THREE.Group(); head.position.set(.02, 1.72, 0); body.add(head);
+  // 허리 위 (비틀기·숙이기)
+  const spine = new THREE.Group(); spine.position.y = .95; body.add(spine);
+  addMesh(spine, BOX(.44, .62, .62), armor, 0, .25, 0);
+  addMesh(spine, BOX(.12, .44, .5), armor, .2, .29, 0);
+  addMesh(spine, BOX(.42, .18, .32), armor, 0, .61, -.42, -.28);
+  addMesh(spine, BOX(.42, .18, .32), armor, 0, .61, .42, .28);
+  const head = new THREE.Group(); head.position.set(.02, .77, 0); spine.add(head);
   addMesh(head, BOX(.34, .36, .32), armor);
   addMesh(head, BOX(.02, .05, .22), eyeM, .175, .02, 0, 0, 0, 0, false);
   if (o.horns){
@@ -411,17 +530,57 @@ function buildKnight(o){
     addMesh(head, new THREE.ConeGeometry(.06, .4, 6), dark, -.03, .26, .17, .55);
   }
   if (o.plume) addMesh(head, BOX(.34, .1, .05), new THREE.MeshStandardMaterial({ color: o.plume, roughness: .9 }), -.06, .23, 0);
-  const cape = addMesh(body, BOX(.05, 1.15, .64), cloth, -.28, 1.04, 0, 0, 0, -.08);
-  if (o.shield) addMesh(body, BOX(.07, .62, .46), new THREE.MeshStandardMaterial({ color: 0x5a4634, roughness: .8 }), .14, 1.12, -.52);
-  const swordYaw = new THREE.Group(); swordYaw.position.set(0, 1.18, 0); body.add(swordYaw);
-  const swordTilt = new THREE.Group(); swordYaw.add(swordTilt);
-  addMesh(swordTilt, BOX(.16, .14, .14), dark, o.r0 - .08, 0, 0);
-  addMesh(swordTilt, BOX(.05, .05, o.guard), dark, o.r0 + .02, 0, 0);
-  const bladeG = new THREE.Group(); bladeG.position.x = o.r0 + .04; swordTilt.add(bladeG);
+  const cape = addMesh(spine, BOX(.05, 1.15, .64), cloth, -.28, .09, 0, 0, 0, -.08);
+  // 팔
+  const armR = buildArm(spine, 1, mats, o), armL = buildArm(spine, -1, mats, o);
+  // 칼: 손 기준 +X 방향으로 뻗음 (주먹을 쥔 방향)
+  const grip = new THREE.Group(); grip.position.set(0, -.05, 0); armR.wr.add(grip);
+  addMesh(grip, BOX(.3, .05, .05), dark, .02, 0, 0);
+  addMesh(grip, BOX(.05, .06, o.guard), dark, .15, 0, 0);
+  const bladeG = new THREE.Group(); bladeG.position.x = .17; grip.add(bladeG);
   addMesh(bladeG, BOX(1, .045, o.bladeW), steel, .5, 0, 0);
+  bladeG.scale.x = o.blade;
+  const tip = new THREE.Object3D(); tip.position.x = 1; bladeG.add(tip);
+  const base = new THREE.Object3D(); base.position.x = .18; bladeG.add(base);
+  // 방패: 왼손에 붙음
+  const shield = !o.shield ? null : addMesh(armL.wr, BOX(.62, .07, .46), new THREE.MeshStandardMaterial({ color: 0x5a4634, roughness: .8 }), .04, -.14, -.04);   // 방패 면이 팔뚝 방향(앞)을 향함
   root.scale.setScalar(o.scale);
   scene.add(root);
-  return { root, rig, body, hipL, hipR, swordYaw, swordTilt, bladeG, armor, eyeM, cape, steel, walk: 0, o };
+  const k = { root, rig, body, spine, hipL, hipR, armR, armL, bladeG, tip, base, armor, eyeM, cape, steel, shield, walk: 0, o };
+  k.rest = mkPose(o.rest || {}, POSE_REST);
+  k.cur = clonePose(k.rest);
+  k.trail = makeTrail(o.trailColor || 0xf3e3c3);
+  return k;
+}
+
+// ---------- 칼 궤적 리본 (칼끝·칼뿌리 위치를 프레임마다 기록해 띠로 그림) ----------
+const TRAIL_N = 16;
+function makeTrail(color){
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 2 * 3), 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 2 * 3), 3));
+  const idx = []; for (let i = 0; i < TRAIL_N - 1; i++){ const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  mesh.frustumCulled = false; scene.add(mesh);
+  return { mesh, geo, pts: [], col: new THREE.Color(color) };
+}
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3();
+function updateTrail(k, active, strength){
+  const tr = k.trail;
+  if (active){ k.base.getWorldPosition(_v1); k.tip.getWorldPosition(_v2); tr.pts.unshift([_v1.x, _v1.y, _v1.z, _v2.x, _v2.y, _v2.z]); }
+  else if (tr.pts.length) tr.pts.pop();
+  if (tr.pts.length > TRAIL_N) tr.pts.length = TRAIL_N;
+  const pos = tr.geo.attributes.position.array, col = tr.geo.attributes.color.array, n = tr.pts.length;
+  for (let i = 0; i < TRAIL_N; i++){
+    const p = tr.pts[Math.min(i, n - 1)] || [0, -99, 0, 0, -99, 0];
+    const f = n ? Math.max(0, 1 - i / Math.max(2, n)) * strength : 0;
+    pos.set(p, i * 6);
+    col[i * 6] = tr.col.r * f * .25; col[i * 6 + 1] = tr.col.g * f * .25; col[i * 6 + 2] = tr.col.b * f * .25;
+    col[i * 6 + 3] = tr.col.r * f; col[i * 6 + 4] = tr.col.g * f; col[i * 6 + 5] = tr.col.b * f;
+  }
+  tr.geo.attributes.position.needsUpdate = true; tr.geo.attributes.color.needsUpdate = true;
+  tr.mesh.visible = n > 1;
 }
 
 function flatMesh(geo, color, opacity){
@@ -481,10 +640,11 @@ function initScene(){
     braziers.push({ flame, light, seed: R() * 10, x: px, z: pz });
   }
 
-  playerRig = buildKnight({ scale: 1.1, armor: 0x8f989d, dark: 0x3b342e, cape: 0x2e211a, eye: 0x161616, shield: true, plume: 0x7a2a22, r0: .38, guard: .3, bladeW: .1 });
-  bossRig = buildKnight({ scale: 2.25, armor: 0x5b564f, dark: 0x262320, cape: 0x3a1f1a, eye: 0xd8cfbc, horns: true, r0: .36, guard: .5, bladeW: .2 });
-  bossLight = new THREE.PointLight(0xff7a30, 0, 10, 2); bossLight.position.set(.2, 1.6, 0); bossRig.body.add(bossLight);
-  healLight = new THREE.PointLight(0xe8b45a, 0, 5, 2); healLight.position.set(.5, 1.3, .4); playerRig.body.add(healLight);
+  playerRig = buildKnight({ scale: 1.1, armor: 0x8f989d, dark: 0x3b342e, cape: 0x2e211a, eye: 0x161616, shield: true, plume: 0x7a2a22, guard: .3, bladeW: .09, blade: 1.35 });
+  bossRig = buildKnight({ scale: 2.25, armor: 0x5b564f, dark: 0x262320, cape: 0x3a1f1a, eye: 0xd8cfbc, horns: true, guard: .46, bladeW: .2, blade: 1.95,
+    rest: { rs: [-.2, -.1, .45], re: .7, rw: [0, 0, -1.75], ls: [.3, 0, .35], le: .45 } });
+  bossLight = new THREE.PointLight(0xff7a30, 0, 10, 2); bossLight.position.set(.2, .65, 0); bossRig.spine.add(bossLight);
+  healLight = new THREE.PointLight(0xe8b45a, 0, 5, 2); healLight.position.set(.05, -.1, 0); playerRig.armL.wr.add(healLight);
 
   // 공격 예고 표시 (바닥)
   tele = {
@@ -494,10 +654,6 @@ function initScene(){
     fill: flatMesh(new THREE.CircleGeometry(1, 56), 0xd9472b, .22),
     nova: flatMesh(new THREE.RingGeometry(.86, 1, 72), 0xe0703a, .5),
   };
-  // 칼 궤적
-  const trailMat = () => new THREE.MeshBasicMaterial({ color: 0xf3e3c3, transparent: true, opacity: .28, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
-  trailP = flatMesh(new THREE.RingGeometry(.5, 1, 8), 0xffffff, .25); trailP.m.material = trailMat();
-  trailB = flatMesh(new THREE.RingGeometry(.5, 1, 8), 0xffffff, .25); trailB.m.material = trailMat();
 
   // 불씨·불꽃 입자
   partGeo = new THREE.BufferGeometry();
@@ -508,10 +664,275 @@ function initScene(){
 }
 
 
+// =====================================================================
+//  사운드 — 배경음악과 효과음을 모두 Web Audio로 즉석 합성합니다.
+//  외부 음원 파일이 없어서 저작권 걱정이 없고, 파일 하나로 어디서나 재생됩니다.
+//  브라우저 정책상 첫 클릭/키 입력 뒤부터 소리가 납니다.
+// =====================================================================
+const SND = (() => {
+  let ctx = null, master, comp, musicBus, sfxBus, verb, noiseBuf;
+  let on = true, cur = null, pending = null, timer = null;
+  try { on = localStorage.getItem('oa-soul-sound') !== 'off'; } catch(e) {}
+  const VOL = { master: .9, music: .5, sfx: .75 };
+  const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  function init(){
+    if (ctx){ if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    try { ctx = new AC(); } catch(e) { ctx = null; return; }
+    master = ctx.createGain(); master.gain.value = on ? VOL.master : 0; master.connect(ctx.destination);
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = .005; comp.release.value = .2; comp.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = VOL.music; musicBus.connect(comp);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = VOL.sfx; sfxBus.connect(comp);
+    verb = ctx.createConvolver(); verb.buffer = impulse(3.4, 2.8);
+    const vr = ctx.createGain(); vr.gain.value = .5; verb.connect(vr); vr.connect(comp);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    timer = setInterval(tick, 30);
+    if (pending !== null){ const p = pending; pending = null; music(p); }
+  }
+  function impulse(sec, decay){
+    const len = ctx.sampleRate * sec, b = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++){ const d = b.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay); }
+    return b;
+  }
+  function route(node, dest, wet){
+    node.connect(dest || sfxBus);
+    if (wet){ const s = ctx.createGain(); s.gain.value = wet; node.connect(s); s.connect(verb); }
+  }
+  // 짧은 음 (타악기·종소리처럼 바로 감쇠)
+  function tone(o){
+    const t = o.t ?? ctx.currentTime, a = o.a ?? .004, d = o.d;
+    const osc = ctx.createOscillator(); osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.f, t);
+    if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t + (o.glide ?? d));
+    if (o.det) osc.detune.value = o.det;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.v, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    let n = osc;
+    if (o.lp){ const f = ctx.createBiquadFilter(); f.type = o.ft || 'lowpass'; f.frequency.setValueAtTime(o.lp, t);
+      if (o.lp2) f.frequency.exponentialRampToValueAtTime(o.lp2, t + d); f.Q.value = o.q ?? .7; n.connect(f); n = f; }
+    n.connect(g); route(g, o.dest, o.wet);
+    osc.start(t); osc.stop(t + d + .05);
+  }
+  // 길게 머무는 음 (패드·합창)
+  function pad(o){
+    const t = o.t ?? ctx.currentTime, a = o.a ?? 1, r = o.r ?? 1.5, d = o.d;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.v, t + a);
+    g.gain.setValueAtTime(o.v, t + Math.max(a, d - r)); g.gain.linearRampToValueAtTime(0, t + d);
+    const oscs = (o.dets || [0]).map(det => { const x = ctx.createOscillator(); x.type = o.type || 'sawtooth'; x.frequency.value = o.f; x.detune.value = det; return x; });
+    let n;
+    if (o.formants){   // 합창 같은 모음 소리
+      n = ctx.createGain(); n.gain.value = 1;
+      o.formants.forEach(([ff, q, amp]) => { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = ff; bp.Q.value = q;
+        const ag = ctx.createGain(); ag.gain.value = amp; oscs.forEach(x => x.connect(bp)); bp.connect(ag); ag.connect(n); });
+    } else {
+      n = ctx.createBiquadFilter(); n.type = 'lowpass'; n.frequency.value = o.lp || 1200; n.Q.value = .5; oscs.forEach(x => x.connect(n));
+    }
+    if (o.vib){ const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = o.vib; lg.gain.value = 6;
+      l.connect(lg); oscs.forEach(x => lg.connect(x.detune)); l.start(t); l.stop(t + d + .1); }
+    n.connect(g); route(g, o.dest, o.wet);
+    oscs.forEach(x => { x.start(t); x.stop(t + d + .1); });
+  }
+  function noise(o){
+    const t = o.t ?? ctx.currentTime, d = o.d;
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = o.ft || 'bandpass'; f.frequency.setValueAtTime(o.f, t);
+    if (o.f2) f.frequency.exponentialRampToValueAtTime(o.f2, t + d); f.Q.value = o.q ?? 1;
+    const g = ctx.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.v, t + (o.a ?? .005)); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    src.connect(f); f.connect(g); route(g, o.dest, o.wet);
+    src.start(t, Math.random() * 2); src.stop(t + d + .05);
+  }
+  // 왜곡된 잡음: 갑옷이 찌그러지는 '빡' 소리
+  let curve = null;
+  function crunch(o){
+    if (!curve){ curve = new Float32Array(1024); for (let i = 0; i < 1024; i++){ const x = i / 512 - 1; curve[i] = Math.tanh(x * 6); } }
+    const t = o.t ?? ctx.currentTime, d = o.d;
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(o.f, t); bp.frequency.exponentialRampToValueAtTime(o.f * .4, t + d); bp.Q.value = .8;
+    const pre = ctx.createGain(); pre.gain.value = 4;
+    const ws = ctx.createWaveShaper(); ws.curve = curve;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+    const g = ctx.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.v, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    src.connect(bp); bp.connect(pre); pre.connect(ws); ws.connect(lp); lp.connect(g); route(g, o.dest, o.wet);
+    src.start(t, Math.random() * 2); src.stop(t + d + .05);
+  }
+  function gong(f0, t, v){
+    [[1, 4], [2.01, 3.2], [2.76, 2.6], [3.9, 2], [5.4, 1.4]].forEach(([r, d], i) => tone({ f: f0 * r, t, d, v: v / (1 + i * .8), a: .01, wet: .6 }));
+    noise({ ft: 'lowpass', f: 400, d: .5, v: v * .6, t });
+  }
+
+  // ---------------- 효과음 ----------------
+  const FX = {
+    // 휘두르기: 낮은 바람 소리 + 묵직한 공기 진동
+    swing(heavy){
+      noise({ f: heavy ? 520 : 900, f2: heavy ? 180 : 320, d: heavy ? .38 : .22, v: heavy ? .6 : .45, q: 1.1, a: .04 });
+      tone({ f: heavy ? 95 : 130, f2: heavy ? 55 : 80, d: heavy ? .3 : .18, v: heavy ? .22 : .14, a: .03 });
+    },
+    // 적중: 순간 충격음 + 저음 쿵 + 찌그러지는 갑옷(왜곡) + 짧은 금속 울림
+    hit(crit){
+      const t = ctx.currentTime;
+      noise({ ft: 'highpass', f: 1800, d: .035, v: .9, t });
+      tone({ f: crit ? 120 : 150, f2: 38, glide: .14, d: crit ? .55 : .38, v: 1.1, t });
+      tone({ type: 'triangle', f: 72, f2: 40, d: crit ? .6 : .35, v: .5, t });
+      crunch({ f: 700, d: crit ? .26 : .17, v: crit ? .9 : .7, t });
+      [233, 351, 587].forEach((f, i) => tone({ f, d: .32 - i * .06, v: .07 / (i + 1), wet: .2, t }));
+      if (crit){
+        tone({ f: 58, f2: 26, d: 1.1, v: .9, t: t + .03 });
+        noise({ ft: 'lowpass', f: 700, f2: 90, d: .8, v: .7, wet: .5, t: t + .02 });
+        crunch({ f: 380, d: .4, v: .7, t: t + .05 });
+      }
+    },
+    // 피격: 묵직한 둔탁음 + 갑옷 찌그러짐
+    hurt(){
+      const t = ctx.currentTime;
+      noise({ ft: 'highpass', f: 1500, d: .03, v: .7, t });
+      tone({ f: 110, f2: 32, glide: .18, d: .5, v: 1.1, t });
+      crunch({ f: 480, d: .24, v: .8, t });
+      [180, 270, 410].forEach((f, i) => tone({ type: 'triangle', f, d: .3, v: .07 / (i + 1), t }));
+    },
+    parryTry(){ noise({ f: 1100, f2: 2600, d: .12, v: .18, q: 2 }); },
+    parry(){
+      tone({ f: 140, f2: 50, d: .35, v: .8 }); crunch({ f: 1400, d: .08, v: .6 });
+      noise({ ft: 'highpass', f: 4000, d: .06, v: .7 });
+      [1760, 2637, 3951, 5274].forEach((f, i) => tone({ f, d: 1.3 - i * .18, v: .2 / (1 + i * .5), wet: .7 }));
+      tone({ type: 'triangle', f: 880, f2: 1760, d: .14, v: .18 });
+    },
+    roll(){ noise({ ft: 'lowpass', f: 800, f2: 250, d: .32, v: .38, a: .02 }); },
+    heal(){ const t = ctx.currentTime; [880, 1109, 1319, 1760].forEach((f, i) => tone({ f, t: t + i * .08, d: 1, v: .11, wet: .8 })); },
+    bossSwing(){ noise({ f: 420, f2: 120, d: .55, v: .75, q: .9, a: .07 }); tone({ f: 70, f2: 36, d: .5, v: .35, a: .05 }); tone({ type: 'sawtooth', f: 55, f2: 35, d: .45, v: .1, lp: 240 }); },
+    dash(){ noise({ ft: 'lowpass', f: 320, d: .55, v: .6, a: .05 }); tone({ f: 55, f2: 38, d: .55, v: .3 }); },
+    slam(){ const t = ctx.currentTime; noise({ ft: 'highpass', f: 1200, d: .04, v: .8, t }); tone({ f: 80, f2: 24, d: 1.3, v: 1.2, t }); crunch({ f: 300, d: .5, v: .8, t }); noise({ ft: 'lowpass', f: 1400, f2: 70, d: 1.1, v: 1, wet: .6, t }); },
+    nova(){ noise({ f: 280, f2: 2200, d: .75, v: .45, q: .8, wet: .5 }); tone({ type: 'sawtooth', f: 90, f2: 200, d: .75, v: .16, lp: 700 }); },
+    roar(){
+      tone({ type: 'sawtooth', f: 88, f2: 64, d: 1.6, v: .4, lp: 800, lp2: 260, q: 5, a: .15, wet: .6 });
+      tone({ type: 'sawtooth', f: 131, f2: 92, d: 1.5, v: .22, lp: 1000, a: .2, wet: .6 });
+      noise({ f: 480, d: 1.4, v: .4, q: .6, a: .25, wet: .6 });
+    },
+    stagger(){ tone({ f: 150, f2: 70, d: .45, v: .35 }); [420, 710].forEach(f => tone({ f, d: .6, v: .07, wet: .4 })); },
+    select(){ tone({ type: 'triangle', f: 660, d: .1, v: .09 }); tone({ type: 'triangle', f: 990, t: ctx.currentTime + .05, d: .12, v: .06 }); },
+    death(){ gong(73.4, ctx.currentTime + .05, .5); tone({ type: 'sawtooth', f: 55, d: 3.5, v: .1, lp: 200, a: .4 }); },
+    victory(){
+      const t = ctx.currentTime + .1;
+      [50, 57, 62, 66, 69, 74].forEach((m, i) => pad({ f: mf(m), t: t + i * .12, d: 5.5, v: .05, a: 1.2, r: 3, dets: [-6, 6], lp: 1800, wet: .8, dest: musicBus }));
+      gong(146.8, t, .25);
+    },
+  };
+
+  // ---------------- 배경음악 ----------------
+  // 16분음표 단위로 미리 예약하는 시퀀서. 곡마다 bpm, 시작(start)·박자마다(step) 함수가 있음
+  const TRACKS = {
+    // 타이틀: 꺼진 화톳불 앞의 느린 D단조 — 낮은 드론 + 느린 화음 + 드문드문 울리는 종소리
+    title: {
+      bpm: 64,
+      start(tr, t){
+        const g = ctx.createGain(); g.gain.value = 0; g.gain.linearRampToValueAtTime(.09, t + 4); g.connect(tr.bus);
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.connect(g);
+        const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = .07; lg.gain.value = 120; lfo.connect(lg); lg.connect(lp.frequency); lfo.start(t);
+        tr.drone = [38, 45, 38.08].map(m => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mf(m); o.connect(lp); o.start(t); return o; });
+        tr.drone.push(lfo);
+      },
+      step(tr, t, s){
+        const prog = [[50, 53, 57, 62], [46, 50, 53, 58], [43, 50, 55, 58], [45, 49, 52, 57]];   // Dm  B♭  Gm  A
+        const bar = Math.floor(s / 16), pos = s % 16, beat = 60 / this.bpm;
+        if (pos === 0 && bar % 2 === 0){
+          const ch = prog[(bar / 2) % 4];
+          ch.forEach(m => pad({ f: mf(m), t, d: beat * 8 + 2, v: .035, a: 2, r: 2.5, dets: [-7, 7], lp: 900, wet: .7, dest: tr.bus }));
+          tone({ f: mf(ch[0] - 12), t, d: beat * 8, v: .1, a: 1.2, dest: tr.bus });
+        }
+        const mel = [69,0,74,0, 72,0,69,0, 65,0,70,0, 69,0,65,0, 67,0,70,74, 72,0,70,0, 69,0,73,0, 76,0,0,0];
+        const loop = Math.floor(s / 128);
+        if (pos % 4 === 0 && loop % 3 !== 2){
+          const m = mel[(s / 4) % 32];
+          if (m){ tone({ f: mf(m), t, d: 2.6, v: .07, a: .005, wet: .9, dest: tr.bus }); tone({ f: mf(m) * 2.76, t, d: 1.1, v: .015, wet: .9, dest: tr.bus }); }
+        }
+      },
+    },
+    // 1보스: 북소리 + 낮은 현악 반복 + 합창. 2페이즈(intensity 1)에서 금관·트레몰로·스네어가 더해지고 빨라짐
+    boss: {
+      bpm: 104,
+      step(tr, t, s){
+        const hot = intensity > 0;
+        const roots = [38, 34, 36, 33];             // D  B♭  C  A
+        const bar = Math.floor(s / 16), pos = s % 16, chordI = Math.floor(bar / 2) % 4, root = roots[chordI];
+        const minor = chordI === 0, third = minor ? 3 : 4;
+        // 낮은 현악 오스티나토 (8분음표)
+        if (pos % 2 === 0){
+          const pat = [0, 0, 12, 0, 7, 0, 12, 7][pos / 2];
+          tone({ type: 'sawtooth', f: mf(root + 12 + pat), t, d: .22, v: .06, a: .01, lp: hot ? 1600 : 1100, dest: tr.bus });
+          tone({ type: 'sawtooth', f: mf(root + 12 + pat), t, d: .22, v: .04, a: .01, lp: 1100, det: 9, dest: tr.bus });
+        }
+        // 베이스
+        if (pos === 0 || pos === 8) tone({ type: 'sawtooth', f: mf(root), t, d: .5, v: .16, lp: 280, dest: tr.bus });
+        // 큰 북 (타이코)
+        const kick = hot ? [0, 3, 6, 8, 10, 11, 12, 14] : [0, 6, 8, 11, 12];
+        if (kick.includes(pos)){
+          const big = pos === 0 || pos === 8;
+          tone({ f: big ? 120 : 165, f2: big ? 42 : 70, glide: .25, t, d: big ? .6 : .3, v: big ? .75 : .38, dest: tr.bus });
+          noise({ ft: 'lowpass', f: big ? 260 : 420, t, d: .14, v: big ? .35 : .2, dest: tr.bus });
+        }
+        // 합창 (2마디마다)
+        if (pos === 0 && bar % 2 === 0){
+          const dur = (60 / (this.bpm * (hot ? 1.1 : 1))) * 8 + .8;
+          [root + 24, root + 24 + third, root + 31].forEach(m => pad({ f: mf(m), t, d: dur, v: hot ? .07 : .055, a: .8, r: 1,
+            formants: [[730, 7, 1], [1090, 8, .6], [2440, 9, .25]], dets: [-8, 8], vib: 5, wet: .8, dest: tr.bus }));
+        }
+        if (hot){
+          // 금관 스탭 + 고음 현 트레몰로 + 스네어
+          if (pos === 0) [root + 12, root + 19, root + 24].forEach(m => tone({ type: 'sawtooth', f: mf(m), t, d: .7, v: .07, a: .02, lp: 400, lp2: 2600, dest: tr.bus, wet: .3 }));
+          tone({ type: 'sawtooth', f: mf(root + 36 + (pos % 4 < 2 ? 7 : 12)), t, d: .09, v: .018, lp: 3000, dest: tr.bus });
+          if (pos === 4 || pos === 12) noise({ f: 1900, q: .8, t, d: .14, v: .2, dest: tr.bus, wet: .3 });
+          if (pos === 0 && bar % 8 === 7) noise({ ft: 'highpass', f: 6000, t: t - .01, d: 1.8, v: .12, a: 1.6, dest: tr.bus });
+        }
+      },
+    },
+  };
+  let intensity = 0;
+
+  function music(name){
+    if (!ctx){ pending = name; return; }
+    if (cur && cur.name === name) return;
+    const now = ctx.currentTime;
+    if (cur){
+      const old = cur;
+      old.bus.gain.cancelScheduledValues(now); old.bus.gain.setValueAtTime(old.bus.gain.value, now); old.bus.gain.linearRampToValueAtTime(0, now + 1.5);
+      setTimeout(() => { (old.drone || []).forEach(o => { try { o.stop(); } catch(e) {} }); old.bus.disconnect(); }, 1800);
+      cur = null;
+    }
+    if (!name || !TRACKS[name]) return;
+    const bus = ctx.createGain(); bus.gain.value = 0; bus.gain.linearRampToValueAtTime(1, now + 1.2); bus.connect(musicBus);
+    const tr = { name, def: TRACKS[name], bus, s: 0, next: now + .15 };
+    if (tr.def.start) tr.def.start(tr, tr.next);
+    cur = tr;
+  }
+  function tick(){
+    if (!ctx || !cur) return;
+    const tr = cur, ahead = ctx.currentTime + .25;
+    if (tr.next < ctx.currentTime - .5) tr.next = ctx.currentTime + .05;   // 탭이 쉬다 돌아온 경우
+    while (tr.next < ahead){
+      const bpm = tr.def.bpm * (tr.name === 'boss' && intensity > 0 ? 1.1 : 1);
+      tr.def.step.call(tr.def, tr, tr.next, tr.s);
+      tr.next += 60 / bpm / 4; tr.s++;
+    }
+  }
+  function fx(name, arg){ if (!ctx || !on || ctx.state !== 'running') return; try { FX[name](arg); } catch(e) {} }
+  function setOn(v){
+    on = v; try { localStorage.setItem('oa-soul-sound', v ? 'on' : 'off'); } catch(e) {}
+    if (ctx){ master.gain.cancelScheduledValues(ctx.currentTime); master.gain.linearRampToValueAtTime(v ? VOL.master : 0, ctx.currentTime + .2); }
+    document.querySelectorAll('.sndbtn').forEach(b => { b.textContent = v ? '소리 켬' : '소리 끔'; b.setAttribute('aria-pressed', String(v)); });
+  }
+  document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
+  return { init, music, fx, setOn, isOn: () => on, setIntensity: v => { intensity = v; } };
+})();
+
 // ---------- 입력 ----------
-const keys = {}, buf = { light:-9, heavy:-9, roll:-9, heal:-9 };
+const keys = {}, buf = { light:-9, heavy:-9, roll:-9, heal:-9, parry:-9 };
 let now = 0;
 const wants = k => { if (now - buf[k] < .28){ buf[k] = -9; return true; } return false; };
+const audioStart = () => { SND.init(); if (game.state === 'title') SND.music('title'); };
+window.addEventListener('pointerdown', audioStart, true);
+window.addEventListener('keydown', e => { if (e.code === 'KeyM' && !/INPUT|TEXTAREA/.test(e.target.tagName || '')) { SND.setOn(!SND.isOn()); return; } audioStart(); }, true);
 const PREVENT = ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
 window.addEventListener('keydown', e => {
   const tag = e.target && e.target.tagName;
@@ -523,15 +944,16 @@ window.addEventListener('keydown', e => {
   if (game.state === 'title' && (e.code === 'Enter' || e.code === 'Space')) { startFight(); return; }
   if (game.state === 'title'){
     const i = DIFF_KEYS.indexOf(game.diff);
-    if (/^Digit[1-9]$/.test(e.code) && DIFF_KEYS[+e.code.slice(5) - 1]) { setDiff(DIFF_KEYS[+e.code.slice(5) - 1]); return; }
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { setDiff(DIFF_KEYS[(i - 1 + DIFF_KEYS.length) % DIFF_KEYS.length]); return; }
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') { setDiff(DIFF_KEYS[(i + 1) % DIFF_KEYS.length]); return; }
+    if (/^Digit[1-9]$/.test(e.code) && DIFF_KEYS[+e.code.slice(5) - 1]) { setDiff(DIFF_KEYS[+e.code.slice(5) - 1], true); return; }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { setDiff(DIFF_KEYS[(i - 1 + DIFF_KEYS.length) % DIFF_KEYS.length], true); return; }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { setDiff(DIFF_KEYS[(i + 1) % DIFF_KEYS.length], true); return; }
   }
   if (e.code === 'KeyR' && game.state !== 'title' && (game.state !== 'fight')) { startFight(); return; }
   if (e.code === 'KeyJ') buf.light = now;
   if (e.code === 'KeyK') buf.heavy = now;
   if (e.code === 'Space' || e.code === 'ShiftLeft') buf.roll = now;
   if (e.code === 'KeyE') buf.heal = now;
+  if (e.code === 'KeyU' || e.code === 'KeyQ') buf.parry = now;
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -608,6 +1030,8 @@ function setMode(m, byUser){
 document.getElementById('modePc').addEventListener('click', () => setMode(false, true));
 document.getElementById('modeMobile').addEventListener('click', () => setMode(true, true));
 document.getElementById('mExit').addEventListener('click', () => setMode(false, true));
+document.querySelectorAll('.sndbtn').forEach(b => b.addEventListener('click', () => { SND.init(); SND.setOn(!SND.isOn()); if (game.state === 'title') SND.music('title'); }));
+SND.setOn(SND.isOn());
 document.getElementById('mBoard').addEventListener('click', () => document.documentElement.classList.add('show-board'));
 document.getElementById('boardClose').addEventListener('click', () => document.documentElement.classList.remove('show-board'));
 // 카메라 기준 이동: W = 카메라가 보는 방향(보스 쪽), D = 화면 오른쪽
@@ -629,7 +1053,7 @@ try { game.deaths = +localStorage.getItem('ashen-knight-deaths') || 0; } catch(e
 
 function makePlayer(){
   return { x: AR.x, y: AR.y + 230, vx:0, vy:0, r:13, face:-Math.PI/2, hp:100, max:100, chip:100, chipT:0,
-    st:100, stMax:100, stDelay:0, state:'idle', t:0, atk:null, combo:0, roll:null, flasks:3, flasksUsed:0, healDone:false,
+    st:100, stMax:100, stDelay:0, state:'idle', t:0, atk:null, combo:0, roll:null, flasks:3, flasksUsed:0, parries:0, healDone:false,
     lastTok:-1, flash:0, trail:[] };
 }
 function makeBoss(key){
@@ -641,7 +1065,7 @@ function makeBoss(key){
 const hittable = b => b.state !== 'roar' && b.state !== 'dead' && b.z < .3;
 
 function reset(){ P = makePlayer(); B = makeBoss('knight'); waves = []; parts = []; freeze = 0; shake = 0; camYaw = -Math.PI / 2; }
-function startFight(){ reset(); game.state = 'fight'; game.t = 0; game.endT = 0; game.resultShown = false; hideResult(); cv.focus(); }
+function startFight(){ SND.init(); SND.setIntensity(0); SND.music(null); SND.music('boss'); reset(); game.state = 'fight'; game.t = 0; game.endT = 0; game.resultShown = false; hideResult(); cv.focus(); }
 
 // ---------- 효과 ----------
 function burst(x, y, n, color, spd = 160, life = .5, size = 2.5){
@@ -662,6 +1086,7 @@ const invuln = () => P.state === 'roll' && P.roll.t > .02 && P.roll.t < .3;
 
 function tryAction(mv){
   if (P.st > 0 && wants('roll')) { startRoll(mv); return true; }
+  if (P.st > 0 && wants('parry')) { SND.fx('parryTry'); P.state = 'parry'; P.t = 0; P.atk = null; P.st = Math.max(0, P.st - PARRY.cost); P.stDelay = .55; return true; }
   if (P.flasks > 0 && wants('heal')) { P.state = 'heal'; P.t = 0; P.flasks--; P.flasksUsed++; P.healDone = false; P.atk = null; return true; }
   if (P.st > 0 && wants('heavy')) { startAttack('heavy'); return true; }
   if (P.st > 0 && wants('light')) { startAttack('light'); return true; }
@@ -672,26 +1097,47 @@ function startAttack(kind){
   P.combo = chain ? (P.combo + 1) % 3 : 0;
   const fin = kind === 'light' && P.combo === 2;
   P.st = Math.max(0, P.st - d.cost); P.stDelay = .55;
-  P.atk = { kind, def:d, phase:'wind', t:0, hit:false, side: P.combo % 2 ? -1 : 1, dmg: d.dmg * (fin ? 1.3 : 1), arc: d.arc * (fin ? 1.2 : 1) };
+  const riposte = B.parried && B.state === 'stagger' && dist(P, B) < 260;   // 패링 직후 공격은 보스 앞까지 파고듦
+  // 약공격 3연타: 대각선 → 역베기 → 찌르기, 강공격: 내려치기 ↔ 올려치기, 반격: 찌르기
+  const motion = riposte ? 'thrust' : kind === 'light' ? PLAYER_CHAIN.light[P.combo] : PLAYER_CHAIN.heavy[P.combo % 2];
+  const mo = MOTIONS[motion];
+  P.atk = { kind, def:d, motion, phase:'wind', t:0, hit:false, dmg: d.dmg * (fin ? 1.3 : 1),
+    arc: d.arc * (fin ? 1.2 : 1) * mo.arcMul, range: d.range + mo.rangeAdd, riposte };
   P.state = 'attack'; P.t = 0;
 }
 function startRoll(mv){
   let dx = mv.x, dy = mv.y;
   if (!mv.len){ dx = -Math.cos(P.face); dy = -Math.sin(P.face); }
-  P.roll = { dx, dy, t:0, back: !mv.len }; P.state = 'roll'; P.t = 0; P.atk = null;
+  P.roll = { dx, dy, t:0, back: !mv.len }; SND.fx('roll'); P.state = 'roll'; P.t = 0; P.atk = null;
   P.st = Math.max(0, P.st - 24); P.stDelay = .55;
 }
-function hurtPlayer(dmg, src, token, kb = 240){
-  if (P.state === 'dead' || invuln() || P.lastTok === token) return;
+function parrySuccess(token){
+  P.lastTok = token; P.parries++;
+  P.state = 'idle'; P.t = 0; P.vx = P.vy = 0;
+  const b = B;
+  b.state = 'stagger'; b.t = 0; b.sp = null; b.z = 0; b.vx = b.vy = 0; b.parried = true; b.poise = b.D.poise;
+  freeze = .16; shake = Math.max(shake, 8); SND.fx('parry');
+  const mx = (P.x + b.x) / 2, my = (P.y + b.y) / 2;
+  burst(mx, my, 28, '#ffe2a0', 300, .45, 2.5); burst(mx, my, 10, '#ffffff', 180, .3, 2);
+  game.banner = { text: 'PARRY', sub: '지금 공격하면 치명타', t: 0, color: COL.gold };
+}
+// 반환값: 'parried' = 패링 성공 (보스 공격 중단)
+function hurtPlayer(dmg, src, token, kb = 240, parryable = false){
+  if (P.state === 'dead' || P.lastTok === token) return;
+  if (parryable && P.state === 'parry' && P.t >= PARRY.start && P.t <= PARRY.end
+      && Math.abs(angDiff(P.face, Math.atan2(src.y - P.y, src.x - P.x))) < PARRY.arc){
+    parrySuccess(token); return 'parried';
+  }
+  if (invuln()) return;
   P.lastTok = token;
-  P.hp = Math.max(0, P.hp - dmg); P.chipT = .6; P.flash = .25;
+  P.hp = Math.max(0, P.hp - dmg); P.chipT = .6; P.flash = .25; SND.fx('hurt');
   freeze = .08; shake = Math.max(shake, 9);
   burst(P.x, P.y, 14, '#7d1014', 190, .55, 3);
   const a = Math.atan2(P.y - src.y, P.x - src.x);
   P.atk = null; P.roll = null;
   if (P.hp <= 0){
     P.state = 'dead'; P.t = 0; P.vx = Math.cos(a) * kb * .5; P.vy = Math.sin(a) * kb * .5;
-    game.state = 'dead'; game.endT = 0; game.deaths++;
+    game.state = 'dead'; game.endT = 0; game.deaths++; SND.music(null); SND.fx('death');
     try { localStorage.setItem('ashen-knight-deaths', String(game.deaths)); } catch(e) {}
     return;
   }
@@ -711,7 +1157,7 @@ function updatePlayer(dt){
   }
   if (p.sprintLock && p.st >= SPRINT.resume) p.sprintLock = false;
   if (p.stDelay > 0) p.stDelay -= dt;
-  else if (p.state !== 'roll' && p.state !== 'attack') p.st = Math.min(p.stMax, p.st + (p.state === 'heal' ? 18 : 50) * dt);
+  else if (p.state !== 'roll' && p.state !== 'attack' && p.state !== 'parry') p.st = Math.min(p.stMax, p.st + (p.state === 'heal' ? 18 : 50) * dt);
   if (B.state !== 'dead' && p.state !== 'dead'){
     // 대쉬 중에는 달리는 방향을 보고, 멈추면 다시 보스를 바라봄
     const want = p.sprint ? Math.atan2(mv.y, mv.x) : Math.atan2(B.y - p.y, B.x - p.x);
@@ -726,11 +1172,15 @@ function updatePlayer(dt){
       const a = p.atk, d = a.def; a.t += dt;
       if (a.phase === 'wind'){
         p.vx = mv.x * 30; p.vy = mv.y * 30;
-        if (a.t >= d.wind){ a.phase = 'active'; a.t = 0; }
+        if (a.riposte){
+          const dd = dist(p, B), gap = dd - (B.r + p.r + 14), left = Math.max(.04, d.wind - a.t);
+          if (gap > 0){ const v = Math.min(900, gap / left), an = Math.atan2(B.y - p.y, B.x - p.x); p.vx = Math.cos(an) * v; p.vy = Math.sin(an) * v; }
+        }
+        if (a.t >= d.wind){ a.phase = 'active'; a.t = 0; SND.fx('swing', a.kind === 'heavy'); }
       }
       if (a.phase === 'active'){
         p.vx = Math.cos(p.face) * d.lunge; p.vy = Math.sin(p.face) * d.lunge;
-        if (!a.hit && hittable(B) && inCone(p, p.face, d.range, a.arc, B, B.r)){ a.hit = true; damageBoss(a.dmg, d.poise); }
+        if (!a.hit && hittable(B) && inCone(p, p.face, a.range, a.arc, B, B.r)){ a.hit = true; damageBoss(a.dmg, d.poise); }
         if (a.t >= d.active){ a.phase = 'rec'; a.t = 0; }
       } else if (a.phase === 'rec'){
         p.vx = mv.x * 50; p.vy = mv.y * 50;
@@ -750,8 +1200,12 @@ function updatePlayer(dt){
     }
     case 'heal':
       p.vx = mv.x * P_SPEED * .35; p.vy = mv.y * P_SPEED * .35;
-      if (p.t >= .6 && !p.healDone){ p.healDone = true; p.hp = Math.min(p.max, p.hp + 45); p.chip = Math.max(p.chip, p.hp); burst(p.x, p.y, 16, '#e8b45a', 70, .8, 2); }
+      if (p.t >= .6 && !p.healDone){ p.healDone = true; SND.fx('heal'); p.hp = Math.min(p.max, p.hp + 45); p.chip = Math.max(p.chip, p.hp); burst(p.x, p.y, 16, '#e8b45a', 70, .8, 2); }
       if (p.t >= 1.05){ p.state = 'idle'; p.t = 0; }
+      break;
+    case 'parry':
+      p.vx = mv.x * 30; p.vy = mv.y * 30;
+      if (p.t >= PARRY.dur){ p.state = 'idle'; p.t = 0; }
       break;
     case 'hurt':
       p.vx *= Math.exp(-9 * dt); p.vy *= Math.exp(-9 * dt);
@@ -770,20 +1224,22 @@ function damageBoss(dmg, poise){
   const b = B;
   if (!hittable(b)) return;
   if (b.state === 'intro'){ b.state = 'chase'; b.t = 0; }
-  const crit = b.state === 'stagger';
-  const d = Math.round(dmg * (crit ? 1.5 : 1));
+  const crit = b.state === 'stagger', riposte = crit && b.parried;
+  const d = Math.round(dmg * (riposte ? PARRY.riposte : crit ? 1.5 : 1));
+  if (riposte){ b.parried = false; game.banner = { text: 'CRITICAL', sub: '', t: 0, color: '#ffd27a' }; }
   b.hp = Math.max(0, b.hp - d); b.chipT = .7; b.dmgAcc += d; b.dmgT = 1.6; b.poiseT = 2.5; b.flash = .12;
+  SND.fx('hit', crit);
   freeze = crit ? .1 : .05; shake = Math.max(shake, crit ? 7 : 3);
   const a = Math.atan2(b.y - P.y, b.x - P.x);
   burst(b.x - Math.cos(a) * b.r * .8, b.y - Math.sin(a) * b.r * .8, crit ? 22 : 10, crit ? '#ffd27a' : '#f0a060', 240, .35, 2);
-  if (b.hp <= 0){ b.state = 'dead'; b.t = 0; b.sp = null; b.vx = b.vy = 0; game.state = 'won'; game.endT = 0; return; }
+  if (b.hp <= 0){ SND.music(null); SND.fx('victory'); b.state = 'dead'; b.t = 0; b.sp = null; b.vx = b.vy = 0; game.state = 'won'; game.endT = 0; return; }
   const ph = b.D.phases[b.phase];
   if (b.phase < b.D.phases.length - 1 && b.hp <= b.max * ph.until){
     b.phase++; b.state = 'roar'; b.t = 0; b.roared = false; b.sp = null; b.z = 0; b.vx = b.vy = 0; b.poise = b.D.poise; return;
   }
   if (!crit){
     b.poise -= poise;
-    if (b.poise <= 0){ b.state = 'stagger'; b.t = 0; b.sp = null; b.z = 0; b.vx = b.vy = 0; b.poise = b.D.poise; }
+    if (b.poise <= 0){ SND.fx('stagger'); b.state = 'stagger'; b.t = 0; b.sp = null; b.z = 0; b.vx = b.vy = 0; b.poise = b.D.poise; }
   }
 }
 
@@ -816,24 +1272,24 @@ function runStep(b, dt, tempo){
       if (sp.t < wind * .8) b.face = turn(b.face, toP, s.track * dt);
       const adv = dist(b, P) > s.range * .7 ? 60 : 0;
       b.vx = Math.cos(b.face) * adv; b.vy = Math.sin(b.face) * adv;
-      if (sp.t >= wind){ sp.phase = 'active'; sp.t = 0; }
+      if (sp.t >= wind){ sp.phase = 'active'; sp.t = 0; SND.fx('bossSwing'); }
     } else {
       b.vx = Math.cos(b.face) * s.lunge; b.vy = Math.sin(b.face) * s.lunge;
-      const k = Math.min(1, sp.t / .16), cur = b.face + lerp(-sp.side * s.arc / 2, sp.side * s.arc / 2, k);
-      // 칼끝이 지나간 범위만 판정
-      const swept = { a0: -sp.side * s.arc / 2, a1: lerp(-sp.side * s.arc / 2, sp.side * s.arc / 2, k) };
-      const mid = b.face + (swept.a0 + swept.a1) / 2, arc = Math.abs(swept.a1 - swept.a0) + .2;
-      if (inCone(b, mid, s.range, arc, P, P.r)) hurtPlayer(s.dmg, b, sp.token);
+      const k = Math.min(1, sp.t / .16), side = (MOTIONS[s.motion] || MOTIONS.diagonal).sweep;
+      // 가로·대각선은 칼끝이 지나간 범위만, 내려치기·올려치기·찌르기는 앞쪽 부채꼴 전체를 판정
+      let mid = b.face, arc = s.arc;
+      if (side){ const a0 = -side * s.arc / 2, a1 = lerp(a0, side * s.arc / 2, k); mid = b.face + (a0 + a1) / 2; arc = Math.abs(a1 - a0) + .2; }
+      if (inCone(b, mid, s.range, arc, P, P.r) && hurtPlayer(s.dmg, b, sp.token, 240, true) === 'parried') return;
       if (sp.t >= .16) nextStep(b, tempo);
     }
   } else if (s.type === 'dash'){
     if (sp.phase === 'wind'){
       b.vx = b.vy = 0;
       if (sp.t < wind * .85) b.face = turn(b.face, toP, 6 * dt);
-      if (sp.t >= wind){ sp.phase = 'active'; sp.t = 0; }
+      if (sp.t >= wind){ sp.phase = 'active'; sp.t = 0; SND.fx('dash'); }
     } else {
       b.vx = Math.cos(b.face) * s.speed * DIFF().speed; b.vy = Math.sin(b.face) * s.speed * DIFF().speed;
-      if (dist(b, P) < b.r + P.r + 6) hurtPlayer(s.dmg, b, sp.token, 340);
+      if (dist(b, P) < b.r + P.r + 6 && hurtPlayer(s.dmg, b, sp.token, 340, true) === 'parried') return;
       if (Math.random() < .5) burst(b.x, b.y, 1, '#6b6157', 40, .5, 3);
       const atWall = Math.hypot(b.x - AR.x, b.y - AR.y) > AR.r - b.r - 3;
       if (sp.t >= s.dur / DIFF().speed || (atWall && sp.t > .08)){ if (atWall){ shake = Math.max(shake, 6); burst(b.x, b.y, 10, '#6b6157', 140, .5, 3); } nextStep(b, tempo); }
@@ -850,7 +1306,7 @@ function runStep(b, dt, tempo){
       b.x = lerp(sp.sx, sp.tx, easeOut(k)); b.y = lerp(sp.sy, sp.ty, easeOut(k)); b.z = Math.sin(k * Math.PI);
       b.vx = b.vy = 0; b.face = turn(b.face, Math.atan2(sp.ty - sp.sy, sp.tx - sp.sx), 4 * dt);
       if (k >= 1){
-        b.z = 0; sp.phase = 'land'; sp.t = 0; shake = Math.max(shake, 12);
+        b.z = 0; sp.phase = 'land'; sp.t = 0; shake = Math.max(shake, 12); SND.fx('slam');
         burst(b.x, b.y, 26, '#7a6f63', 260, .6, 3);
         if (Math.hypot(P.x - b.x, P.y - b.y) < s.radius + P.r) hurtPlayer(s.dmg, b, sp.token, 360);
       }
@@ -858,6 +1314,7 @@ function runStep(b, dt, tempo){
   } else if (s.type === 'nova'){
     b.vx = b.vy = 0; b.face = turn(b.face, toP, 2 * dt);
     if (sp.t >= wind){
+      SND.fx('nova');
       waves.push({ x: b.x, y: b.y, r: b.r, speed: s.speed * tempo, maxR: 560, thick: s.thick, dmg: s.dmg, token: ++TOK, kb: 220, color: COL.ember });
       shake = Math.max(shake, 5); burst(b.x, b.y, 18, COL.ember, 200, .5, 2);
       nextStep(b, tempo);
@@ -900,7 +1357,7 @@ function updateBoss(dt){
     case 'roar':
       b.vx = b.vy = 0;
       if (b.t >= .55 && !b.roared){
-        b.roared = true; shake = 16;
+        b.roared = true; shake = 16; SND.fx('roar'); SND.setIntensity(1);
         waves.push({ x: b.x, y: b.y, r: b.r, speed: 520, maxR: 300, thick: 34, dmg: 10, token: ++TOK, kb: 420, color: '#f3e3c3' });
         burst(b.x, b.y, 40, COL.ember, 320, .9, 2.5);
       }
@@ -936,6 +1393,7 @@ function updateWorld(dt){
 function update(dt){
   if (game.state === 'title'){ updateBoss(dt); updateWorld(dt); return; }
   game.endT += dt;
+  if (game.banner && (game.banner.t += dt) > 1.3) game.banner = null;
   if (game.state === 'fight') game.t += dt;
   if (!game.resultShown && ((game.state === 'dead' && game.endT > 2.4) || (game.state === 'won' && game.endT > 3))){
     game.resultShown = true; showResult();
@@ -944,11 +1402,6 @@ function update(dt){
 }
 
 // ---------- 3D 동기화: 게임 상태 → 모델 자세 ----------
-function sectorGeo(mesh, inner, outer, a0, a1){
-  const lo = Math.min(a0, a1), hi = Math.max(a0, a1);
-  mesh.geometry.dispose();
-  mesh.geometry = new THREE.RingGeometry(inner, outer, 20, 1, -hi, Math.max(.01, hi - lo));
-}
 function poseKnight(k, o){
   k.root.visible = o.visible !== false;
   k.root.position.set(toX(o.x), (o.lift || 0), toZ(o.y));
@@ -961,77 +1414,88 @@ function poseKnight(k, o){
   const amp = Math.min(1, spd / 120) * .55;
   k.hipL.rotation.z = Math.sin(k.walk) * amp; k.hipR.rotation.z = -Math.sin(k.walk) * amp;
   k.cape.rotation.z = -.08 - Math.min(.5, spd * .002) + Math.sin(now * 3 + k.o.scale) * .04;
-  // 검: 2D 각도와 같은 기준 (얼굴 방향 기준 상대각)
-  k.swordYaw.rotation.y = -o.ang;
-  k.swordTilt.rotation.z = o.tilt;
-  k.bladeG.scale.x = Math.max(.2, o.lenPx * S / k.o.scale * .92);
 }
 
 function updateScene(dt){
   // ---- 플레이어
   const p = P, pr = playerRig;
-  let ang = .9, tilt = -.6, len = 40, trail = null, heading = p.face, rz = 0, rx = 0, rigY = .95, lift = 0;
+  let heading = p.face, rz = 0, rx = 0, rigY = .95, lift = 0, target = pr.rest, rate = 14, trailOn = false;
+  pr.sprintK = lerp(pr.sprintK || 0, p.sprint && p.state === 'idle' ? 1 : 0, Math.min(1, dt * 8));
   if (p.state === 'attack' && p.atk){
-    const a = p.atk, d = a.def, s = a.side, half = a.arc / 2; len = d.len;
-    if (a.phase === 'wind'){ const k = clamp(a.t / d.wind, 0, 1); ang = lerp(.9 * s, -s * (half + .35), easeOut(k)); tilt = lerp(-.6, .5, k); }
-    else if (a.phase === 'active'){ ang = lerp(-s * half, s * half, clamp(a.t / d.active, 0, 1)); tilt = .05; trail = [-s * half, ang]; }
-    else { const k = clamp(a.t / d.rec, 0, 1); ang = lerp(s * half, .9, k); tilt = lerp(.05, -.6, k); }
+    const a = p.atk, d = a.def, mo = MOTIONS[a.motion] || MOTIONS.diagonal;
+    const k = a.phase === 'wind' ? a.t / d.wind : a.phase === 'active' ? a.t / d.active : a.t / d.rec;
+    target = motionPose(pr.rest, mo, a.phase, k);
+    rate = a.phase === 'wind' ? 45 : Infinity;
+    trailOn = a.phase === 'active' || (a.phase === 'rec' && a.t < .06);
   } else if (p.state === 'roll' && p.roll){
     const r = p.roll, k = clamp(r.t / (r.back ? .3 : .44), 0, 1);
     if (r.back){ rz = .3 * Math.sin(k * Math.PI); lift = .25 * Math.sin(k * Math.PI); }
     else { heading = Math.atan2(r.dy, r.dx); rz = -k * TAU; rigY = .95 - .45 * Math.sin(k * Math.PI); }
-    ang = 2.4; tilt = -.3;
-  } else if (p.state === 'hurt'){ rz = .4 * (1 - clamp(p.t / .38, 0, 1)); }
-  else if (p.state === 'heal'){ ang = 1.3; tilt = .4; }
-  else if (p.state === 'dead'){ const k = Math.min(1, p.t * 2.2); rx = k * 1.45; rigY = lerp(.95, .3, k); }
-  pr.lean = lerp(pr.lean || 0, p.sprint ? -.22 : 0, Math.min(1, dt * 10));
-  if (p.state === 'idle'){ rz += pr.lean; if (p.sprint){ ang = 2.3; tilt = -.5; } }
+    target = mkPose(POSES.roll, pr.rest); rate = 25;
+  } else if (p.state === 'hurt'){ rz = .4 * (1 - clamp(p.t / .38, 0, 1)); target = mkPose(POSES.hurt, pr.rest); rate = 30; }
+  else if (p.state === 'heal'){ target = mkPose(POSES.heal, pr.rest); rate = 12; }
+  else if (p.state === 'parry'){ target = mkPose(POSES.parry, pr.rest); rate = p.t < PARRY.end ? 60 : 14; }
+  else if (p.state === 'dead'){ const k = Math.min(1, p.t * 2.2); rx = k * 1.45; rigY = lerp(.95, .3, k); target = mkPose(POSES.dead, pr.rest); rate = 8; }
+  else {
+    target = lerpPose(pr.rest, mkPose(POSES.sprint, pr.rest), pr.sprintK);
+    rz += -.22 * pr.sprintK;
+  }
+  // 걸을 때 팔 흔들기
+  const pSpeed = (p.state === 'roll' || p.state === 'dead') ? 0 : Math.hypot(p.vx, p.vy);
+  if (p.state === 'idle'){
+    target = clonePose(target);
+    const sw = Math.sin(pr.walk) * Math.min(1, pSpeed / 120) * (.25 + .25 * pr.sprintK);
+    target.rs[2] += sw; target.ls[2] -= sw;
+  }
   const fovT = (W < H ? 66 : 50) + (p.sprint ? 6 : 0); camera.fov += (fovT - camera.fov) * Math.min(1, dt * 5); camera.updateProjectionMatrix();
   pr.armor.emissive.setHex(p.flash > 0 ? 0x661111 : 0x000000);
   healLight.intensity = p.state === 'heal' ? 1.6 * Math.sin(clamp(p.t / 1.05, 0, 1) * Math.PI) : 0;
-  poseKnight(pr, { visible: game.state !== 'title', x: p.x, y: p.y, heading, ang, tilt, lenPx: len, rz, rx, rigY, lift,
-    speed: (p.state === 'roll' || p.state === 'dead') ? 0 : Math.hypot(p.vx, p.vy), dt, stride: 3.4 });
-  trailP.g.visible = !!trail;
-  if (trail){
-    const sc = pr.o.scale, r0 = (pr.o.r0 + .04) * sc, L = len * S * .92;
-    sectorGeo(trailP.m, r0 + L * .35, r0 + L, trail[0], trail[1]);
-    trailP.g.position.set(toX(p.x), 1.18 * sc * .98 + (rigY - .95), toZ(p.y)); trailP.g.rotation.y = -p.face;
-  }
+  poseKnight(pr, { visible: game.state !== 'title', x: p.x, y: p.y, heading, rz, rx, rigY, lift, speed: pSpeed, dt, stride: 3.4 });
+  driveRig(pr, target, rate, dt);
+  pr.root.updateMatrixWorld(true);
+  updateTrail(pr, trailOn && game.state !== 'title', 1);
 
   // ---- 보스
   const b = B, br = bossRig, ph = b.D.phases[b.phase];
-  let bang = .75, btilt = -.7, blen = 95, btrail = null, brz = 0, brx = 0, bRigY = .95;
+  let bTarget = br.rest, bRate = 10, bTrail = false, brz = 0, brx = 0, bRigY = .95;
   const phase2 = b.phase > 0;
   if (b.state === 'attack' && b.sp){
-    const sp = b.sp, s = sp.s, tempo = (ph.tempo || 1) * DIFF().tempo;
+    const sp = b.sp, s = sp.s, tempo = (ph.tempo || 1) * DIFF().tempo, kw = clamp(sp.t / (s.wind / tempo), 0, 1);
     if (s.type === 'swing'){
-      blen = s.range - 18;
-      if (sp.phase === 'wind'){ const k = clamp(sp.t / (s.wind / tempo), 0, 1); bang = lerp(.75, -sp.side * (s.arc / 2 + .45), easeOut(k)); btilt = lerp(-.7, .6, k); }
-      else { const k = clamp(sp.t / .16, 0, 1); bang = lerp(-sp.side * s.arc / 2, sp.side * s.arc / 2, k); btilt = 0; btrail = [-sp.side * s.arc / 2, bang]; }
-    } else if (s.type === 'dash'){ bang = sp.phase === 'wind' ? -.6 : .1; btilt = sp.phase === 'wind' ? .2 : -.15; brz = sp.phase === 'wind' ? .12 : -.25; }
-    else if (s.type === 'leap'){
-      if (sp.phase === 'wind'){ const k = clamp(sp.t / (s.wind / tempo), 0, 1); bRigY = .95 - .25 * k; bang = 0; btilt = 1.2 * k; }
-      else if (sp.phase === 'air'){ bang = 0; btilt = 1.3; }
-      else { bang = 0; btilt = -1.1; brz = -.35; bRigY = .75; }
-    } else if (s.type === 'nova'){ const k = clamp(sp.t / (s.wind / tempo), 0, 1); bang = 0; btilt = 1.4 * k; brz = .15 * k; }
-  } else if (b.state === 'rec'){ bang = .3; btilt = -.9; brz = -.08; }
-  else if (b.state === 'roar'){ bang = 1.3; btilt = .3; brz = .35 * Math.min(1, b.t * 3); }
-  else if (b.state === 'stagger'){ bang = 1.9; btilt = -1; brz = -.3 + Math.sin(b.t * 30) * .05 * (1 - b.t / 1.6); bRigY = .7; }
-  else if (b.state === 'dead'){ const k = Math.min(1, b.t / 1.4); brz = -k * 1.45; bRigY = lerp(.95, .35, k); bang = 1.6; btilt = -1.2; }
+      const mo = MOTIONS[s.motion] || MOTIONS.diagonal; b.lastMotion = s.motion || 'diagonal';
+      if (sp.phase === 'wind'){ bTarget = motionPose(br.rest, mo, 'wind', kw); bRate = 30; }
+      else { bTarget = motionPose(br.rest, mo, 'active', sp.t / .16); bRate = Infinity; bTrail = true; }
+    } else if (s.type === 'dash'){
+      b.lastMotion = null;
+      bTarget = mkPose(sp.phase === 'wind' ? POSES.dashWind : POSES.dashRun, br.rest); bRate = 12;
+      brz = sp.phase === 'wind' ? .12 : -.25;
+    } else if (s.type === 'leap'){
+      b.lastMotion = 'overhead';
+      if (sp.phase === 'wind'){ bRigY = .95 - .25 * kw; bTarget = motionPose(br.rest, MOTIONS.overhead, 'wind', kw); bRate = 20; }
+      else if (sp.phase === 'air'){ bTarget = mkPose(MOTIONS.overhead.wind, br.rest); bRate = 20; }
+      else { bTarget = motionPose(br.rest, MOTIONS.overhead, 'active', 1); bRate = 40; brz = -.35; bRigY = .75; bTrail = sp.t < .1; }
+    } else if (s.type === 'nova'){
+      b.lastMotion = null;
+      bTarget = lerpPose(br.rest, mkPose(POSES.plant, br.rest), kw); bRate = 14; brz = .15 * kw;
+    }
+  } else if (b.state === 'rec'){
+    const mo = b.lastMotion && MOTIONS[b.lastMotion];
+    bTarget = mo ? motionPose(br.rest, mo, 'rec', Math.min(1, b.t / Math.max(.3, b.recDur * .7))) : br.rest; bRate = mo ? 20 : 8; brz = -.08;
+  }
+  else if (b.state === 'roar'){ bTarget = mkPose(POSES.roar, br.rest); bRate = 10; brz = .35 * Math.min(1, b.t * 3); }
+  else if (b.state === 'stagger'){ bTarget = mkPose(POSES.stagger, br.rest); bRate = 18; brz = -.3 + Math.sin(b.t * 30) * .05 * (1 - b.t / 1.6); bRigY = .7; }
+  else if (b.state === 'dead'){ const k = Math.min(1, b.t / 1.4); brz = -k * 1.45; bRigY = lerp(.95, .35, k); bTarget = mkPose(POSES.stagger, br.rest); bRate = 6; }
   const sink = b.state === 'dead' ? Math.max(0, b.t - 2.2) * .9 : 0;
   br.armor.emissive.setHex(b.flash > 0 ? 0x553a2a : (phase2 ? 0x2a0c02 : 0x000000));
   br.eyeM.color.setHex(phase2 ? 0xff8a3d : 0xd8cfbc);
   br.steel.emissive.setHex(phase2 ? 0x3a1203 : 0x000000);
+  br.trail.col.setHex(phase2 ? 0xff9a50 : 0xf3e3c3);
   bossLight.intensity = phase2 && b.state !== 'dead' ? 2.2 + Math.sin(now * 7) * .5 : 0;
   poseKnight(br, { visible: !(b.state === 'dead' && b.t > 4), x: b.x, y: b.y, heading: b.face + (b.state === 'stagger' ? .3 : 0),
-    ang: bang, tilt: btilt, lenPx: blen, rz: brz, rx: brx, rigY: bRigY, lift: b.z * 3.6 - sink,
-    speed: b.state === 'dead' ? 0 : Math.hypot(b.vx, b.vy), dt, stride: 1.6 });
-  trailB.g.visible = !!btrail;
-  if (btrail){
-    const sc = br.o.scale, r0 = (br.o.r0 + .04) * sc, L = blen * S * .92;
-    sectorGeo(trailB.m, r0 + L * .3, r0 + L, btrail[0], btrail[1]);
-    trailB.g.position.set(toX(b.x), 1.18 * sc - .1, toZ(b.y)); trailB.g.rotation.y = -b.face;
-  }
+    rz: brz, rx: brx, rigY: bRigY, lift: b.z * 3.6 - sink, speed: b.state === 'dead' ? 0 : Math.hypot(b.vx, b.vy), dt, stride: 1.6 });
+  driveRig(br, bTarget, bRate, dt);
+  br.root.updateMatrixWorld(true);
+  updateTrail(br, bTrail, 1);
 
   // ---- 공격 예고
   for (const key of ['cone', 'rect', 'ring', 'fill', 'nova']) tele[key].g.visible = false;
@@ -1159,6 +1623,14 @@ function drawHUD(){
   if (B.dmgAcc > 0){ ctx.textAlign = 'right'; ctx.font = '600 15px "Cinzel", serif'; ctx.fillStyle = COL.bone; ctx.fillText(String(B.dmgAcc), bx + bw, by - 9); ctx.textAlign = 'left'; }
   bar(bx, by, bw, 9, B.hp, B.max, B.chip, '#8d1418');
   // 경과 시간 (모바일은 버튼 자리라 생략)
+  if (game.banner){
+    const bn = game.banner, a = bn.t < .5 ? 1 : Math.max(0, 1 - (bn.t - .5) / .8), sc = 1 + .25 * Math.max(0, 1 - bn.t / .15);
+    ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = bn.color; ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = 12;
+    ctx.font = `700 ${Math.round(40 * sc * Math.min(1, W / 560))}px "Cinzel", serif`; spaced(bn.text, W / 2, H * .36, 8);
+    if (bn.sub){ ctx.font = '500 14px "Noto Sans KR", sans-serif'; ctx.fillStyle = COL.bone; ctx.fillText(bn.sub, W / 2, H * .36 + 34); }
+    ctx.restore(); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
   if (mobile) return;
   ctx.textAlign = 'right'; ctx.font = '600 13px "Cinzel", serif'; ctx.fillStyle = COL.dim;
   const t = Math.floor(game.t); ctx.fillText(`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, W - 26, 34);
@@ -1182,6 +1654,7 @@ function drawScreens(){
     ctx.fillStyle = COL.gold; ctx.font = '600 15px "Cinzel", serif'; spaced('CHAPTER I · THE ASHEN KNIGHT', W / 2, H / 2 - 16, 6 * ts);
     ctx.globalAlpha = .55 + .45 * Math.sin(now * 3);
     ctx.fillStyle = COL.bone; ctx.font = '500 15px "Noto Sans KR", sans-serif'; ctx.fillText(mobile ? '난이도를 고르고 화면을 눌러 시작' : '난이도를 고르고 Enter 또는 클릭하여 시작', W / 2, H / 2 + 122);
+    ctx.globalAlpha = 1; ctx.fillStyle = COL.dim; ctx.font = '600 11px "Cinzel", serif'; spaced(GAME_VERSION, W / 2, H - 18 - SAFE.b, 3);
     ctx.globalAlpha = 1;
   } else if (game.state === 'dead'){
     const k = clamp((game.endT - .6) / 1.4, 0, 1);
@@ -1347,6 +1820,7 @@ function showResult(){
   [[`보스에게 준 피해 (${s.dmg.toLocaleString()} / ${B.max.toLocaleString()})`, '+' + s.dmg.toLocaleString()],
    [s.won ? `남은 에스트 ${s.saved}병` : '남은 에스트 (처치해야 인정)', s.won ? '+' + s.flaskPts.toLocaleString() : '—'],
    ['처치 보너스', s.won ? '+' + s.winPts.toLocaleString() : '—'],
+   ['패링 성공', `${P.parries}회`],
    ['전투 시간', fmtTime(s.time)]].forEach(([k, v]) => {
     const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
     a.textContent = k; b.textContent = v; li.append(a, b); rows.append(li);
@@ -1409,12 +1883,13 @@ function setFilter(k){
     b.setAttribute('role', 'radio');
     const t = document.createElement('b'); t.textContent = DIFFICULTY[k].label;
     const en = document.createElement('small'); en.textContent = (i + 1) + ' · ' + DIFFICULTY[k].en;
-    b.append(t, en); b.addEventListener('click', () => setDiff(k)); row.append(b);
+    b.append(t, en); b.addEventListener('click', () => setDiff(k, true)); row.append(b);
   });
   setDiff(game.diff);
 })();
-function setDiff(k){
+function setDiff(k, byUser){
   if (!DIFFICULTY[k]) return;
+  if (byUser && k !== game.diff) SND.fx('select');
   game.diff = k;
   try { localStorage.setItem('oa-soul-diff', k); } catch(e) {}
   document.querySelectorAll('#diffSel .drow button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.k === k)));

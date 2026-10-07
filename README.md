@@ -8,6 +8,7 @@
 |---|---|
 | `index.html` | 게임 전체 (HTML 하나) |
 | `setup.sql` | Supabase 순위표 테이블 설정 (처음 설치할 때) |
+| `CHANGELOG.md` | 버전 기록과 롤백 기준 |
 | `migrate-v2.sql` | 난이도 업데이트용 변경 (예전 setup.sql을 이미 실행한 경우 한 번만) |
 
 ## 순위표 연결
@@ -25,3 +26,7 @@
 ## 난이도 추가하기
 
 `index.html`의 `DIFFICULTY` 객체에 한 줄을 추가하면 타이틀 화면 선택지와 명예의 전당 필터에 자동으로 나타납니다. 키 이름은 영문 소문자로 쓰세요(예: `nightmare`).
+
+## 공격 모션 추가하기
+
+`index.html`의 `MOTIONS`에 예비동작(wind)과 휘두르는 동안의 자세(active)를 관절 각도로 적으면 새 공격 궤적이 됩니다. 보스 패턴(`PATTERNS`)의 `motion`이나 플레이어 연타(`PLAYER_CHAIN`)에 이름을 넣어 사용하세요.
