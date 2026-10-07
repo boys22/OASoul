@@ -140,7 +140,7 @@ html.mobile.show-board .bclose{display:inline-block}
   <header>
     <h1>OA Soul<small>CHAPTER I · ASHEN KNIGHT</small></h1>
     <div class="hright">
-      <div class="ver"><b id="verTag">BETA 0.4.1</b> · 락온 3인칭 시점 · 순위표</div>
+      <div class="ver"><b id="verTag">BETA 0.5</b> · 락온 3인칭 시점 · 순위표</div>
       <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
       <button class="sndbtn gfxbtn" type="button" aria-pressed="false">그래픽: 보통</button>
       <div class="mode" role="group" aria-label="조작 모드">
@@ -231,7 +231,7 @@ html.mobile.show-board .bclose{display:inline-block}
 //    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
 // 게임 버전 (화면 표시용). 버전 기록은 CHANGELOG.md 참고
-const GAME_VERSION = 'BETA 0.4.1';
+const GAME_VERSION = 'BETA 0.5';
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
 
@@ -246,8 +246,23 @@ const BOSSES = {
     phases: [
       { until: 0.5, tempo: 1.0,  speedMul: 1.0,
         patterns: { slash: 3, double: 2.5, smash: 1.5, pierce: 1.5, charge: 2, leap: 1.5 } },
+      // 2페이즈는 규칙이 있는 흐름 (rules): 유저가 외워서 대응할 수 있게
+      //   ① 작은 공격 cycle번 → 큰 기술(big) 1번 → 긴 빈틈
+      //   ② 거리별로 쓰는 기술이 정해짐 (bands: 이 거리 미만이면 이 묶음)
+      //   ③ 연속 베기는 앞 2타 고정, 마지막 타만 높이 들면 내려찍기 / 뒤로 당기면 찌르기
+      //   ④ 큰 기술 직전엔 불꽃 왕관이 커지고 고유 소리
+      //   ⑤ 응징: 멀리서 에스트 → 돌진 베기, 구르기 남발 → 불꽃 파동
+      //   체력 desperateAt 이하에서 필살기 1회
       { until: 0,   tempo: 1.18, speedMul: 1.25, eye: '#ff8a3d', glow: '#e0703a',
-        patterns: { double: 2, flurry: 2.5, smash: 1.5, pierce: 1.5, chargeSlash: 2, leap: 1.5, nova: 2 } },
+        rules: {
+          cycle: 2, big: 'flameSlam', bigChaseMax: 2.2, bigFar: 'leap',
+          bands: [ { below: 150, patterns: { double: 2, flurryHigh: 1.5, flurryLow: 1.5 } },
+                   { below: 260, patterns: { pierce: 2, chargeSlash: 2 } },
+                   { below: 9999, patterns: { leap: 2, chargeSlash: 1 } } ],
+          punishHeal: 'chargeSlash', punishHealMin: 140,
+          punishRoll: 'nova', rollSpam: 3, rollWindow: 3,
+          desperate: 'inferno', desperateAt: .3,
+        } },
     ],
   },
 };
@@ -269,6 +284,20 @@ const PATTERNS = {
                                                    {type:'swing', motion:'rising', wind:.35, arc:1.2, range:120, dmg:26, lunge:200, track:6} ] },
   leap:   { range:[140,999], rec:1.05, steps:[ {type:'leap', wind:.4, air:.85, radius:100, dmg:36} ] },
   nova:   { range:[0,300],  rec:.75, steps:[ {type:'nova', wind:1.0, speed:260, thick:24, dmg:24} ] },
+  // 2페이즈 연속 베기: 앞 두 타는 같고 마지막 예비동작으로 구분 (overhead = 검을 높이 듦, thrust = 뒤로 당김)
+  flurryHigh: { range:[0,170], rec:1.15, steps:[ {type:'swing', motion:'diagonal', wind:.55, arc:1.8, range:110, dmg:20, lunge:220, track:3.5},
+                                               {type:'swing', motion:'slashL', wind:.32, arc:2.1, range:110, dmg:20, lunge:220, track:4.5},
+                                               {type:'swing', motion:'overhead', wind:.75, arc:1.0, range:135, dmg:34, lunge:200, track:2.6} ] },
+  flurryLow:  { range:[0,170], rec:1.15, steps:[ {type:'swing', motion:'diagonal', wind:.55, arc:1.8, range:110, dmg:20, lunge:220, track:3.5},
+                                               {type:'swing', motion:'slashL', wind:.32, arc:2.1, range:110, dmg:20, lunge:220, track:4.5},
+                                               {type:'swing', motion:'thrust', wind:.6, arc:.55, range:150, dmg:28, lunge:460, track:3.4} ] },
+  // 불꽃 내려찍기: 검을 높이 들고(왕관 불꽃 커짐) 내려찍으면 앞쪽 부채꼴로 불길 3줄기. 줄기 사이 틈이나 옆으로 피하기
+  flameSlam:  { range:[0,240], rec:1.9, big:true, steps:[ {type:'flameSlam', motion:'overhead', wind:1.05, arc:.95, range:130, dmg:36, lunge:160, track:2.4,
+                                               lines:3, spread:.5, lineSpeed:360, lineLen:560, lineR:20, lineDmg:24} ] },
+  // 필살기 (체력 30% 이하 1번): 검을 꽂고 불꽃 파동 3연속
+  inferno:    { range:[0,9999], rec:2.0, big:true, steps:[ {type:'nova', wind:1.2, speed:250, thick:26, dmg:22},
+                                               {type:'nova', wind:.6, speed:280, thick:26, dmg:22},
+                                               {type:'nova', wind:.6, speed:310, thick:26, dmg:22} ] },
 };
 
 // 난이도 — 새 난이도는 여기에 한 줄 추가하면 선택 화면과 명예의 전당 필터에 자동으로 나타납니다.
@@ -431,10 +460,11 @@ function driveRig(k, target, rate, dt){ k.cur = lerpPose(k.cur, target, 1 - Math
 const S = 1 / 20;
 const toX = x => (x - AR.x) * S, toZ = y => (y - AR.y) * S;
 let renderer = null, scene, camera, camYaw = -Math.PI / 2, moon = null, ENVR = null, envP2 = 0;
-let playerRig, bossRig, tele, partGeo, bossLight, healLight, trailP, trailB;
+let playerRig, bossRig, bossP2, fireFx = [], tele, partGeo, bossLight, healLight, trailP, trailB;
 const camPos = { x: 5.5, y: 2.7, z: 13.5 }, camLook = { x: 0, y: 2.5, z: 22 };   // 처음엔 안개 문 앞 구도
 const waveMeshes = new Map(), pillars = [], braziers = [];
-const MAXP = 800;
+const MAXP = 900;
+const FIRE_C = window.THREE ? ['#ff5a14', '#ffb040', '#c0300a'].map(c => new THREE.Color(c)) : [];
 
 function makeFloorTexture(){
   const size = 2048, R0 = AR.r + 70, k = size / (2 * R0);
@@ -792,6 +822,85 @@ function buildPlayerKnight(o){
 // ---------- 보스 잿빛 기사 아르논 v2 ----------
 // 팔레트: 잿빛 강철 + 검은 무쇠 + 녹 + 핏빛 넝마 + 갑옷 틈의 불씨
 const PALETTE_BOSS = { steel: 0x77706a, dark: 0x2c2825, rust: 0x7a4a2a, cloth: 0x3c1d18, horn: 0x231f1c, ember: 0xff6a20 };
+// 2페이즈 보스 변화: 그을린 갑옷, 가슴·투구·견갑 금, 불꽃 왕관, 달아오른 검, 몸에서 피어오르는 불씨
+// 새 조명 없이, 시작할 때 미리 만들어 두고(셰이더 미리 준비) 투명도·색만 바꿔서 전환 순간 끊김이 없음
+function addBossP2(k){
+  const S3 = k.o.scale, lin = (r, g, b) => new THREE.Color().setRGB(r, g, b);
+  const glow = (c, add) => { const m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending }); m.userData.noShadow = true; return m; };
+  const lava = glow(lin(1, .13, .01)), lavaHot = glow(lin(1, .5, .1)), flameM = glow(lin(.9, .1, .01), true), flameIn = glow(lin(.8, .35, .05), true);
+  const crack = (pp, pts, w, m, xo) => {   // 지그재그 금: [y, z] 점들을 얇은 상자로 이음
+    for (let i = 0; i < pts.length - 1; i++){
+      const [y1, z1] = pts[i], [y2, z2] = pts[i + 1], len = Math.hypot(y2 - y1, z2 - z1);
+      pp.box(.012, len + w, w, m, xo, (y1 + y2) / 2, (z1 + z2) / 2, Math.atan2(z2 - z1, y2 - y1), 0, 0);
+    }
+    return pp;
+  };
+  const chest = Parts();
+  crack(chest, [[.62, .02], [.5, -.06], [.42, .03], [.3, -.05], [.18, .04], [.08, -.02]], .028, lava, .345);
+  crack(chest, [[.5, -.06], [.46, -.2], [.36, -.26]], .02, lava, .335);
+  crack(chest, [[.3, -.05], [.26, .14], [.16, .22]], .02, lava, .335);
+  crack(chest, [[.6, .02], [.44, .02], [.28, 0]], .01, lavaHot, .352);
+  chest.build(k.spine, 0);
+  const head = k.spine.children.find(c => c.isGroup && c.position.y > .7 && c.position.x > 0);
+  const hp = Parts();
+  crack(hp, [[.2, .06], [.12, -.02], [.08, .08], [-.02, .03], [-.12, .1]], .02, lava, .19);
+  crack(hp, [[.12, -.02], [0, -.1], [-.1, -.08]], .016, lava, .19);
+  hp.build(head, 0);
+  const crown = new THREE.Group(); crown.position.set(-.02, .25, 0); head.add(crown);
+  const cp = Parts(), N = 9;
+  for (let i = 0; i < N; i++){
+    const a = i / N * TAU, h = .2 + (i % 3 === 0 ? .14 : i % 2 ? .05 : .09), x = Math.cos(a) * .13, z = Math.sin(a) * .13;
+    cp.cone(.05, h, 5, flameM, x, h / 2, z, Math.sin(a) * .25, 0, -Math.cos(a) * .25);
+    cp.cone(.025, h * .6, 5, flameIn, x * .95, h * .3, z * .95, Math.sin(a) * .25, 0, -Math.cos(a) * .25);
+  }
+  cp.build(crown, 0);
+  for (const [arm, sd] of [[k.armR, 1], [k.armL, -1]])
+    Parts().box(.2, .014, .014, lava, .04, .14, sd * .14, 0, 0, -.4).box(.14, .014, .014, lava, -.05, .1, sd * .2, 0, 0, .5).build(arm.upper, 0);
+  const L = k.o.blade;
+  Parts().box(L - .45, .052, .022, lava, (L - .45) / 2 + .08, 0, 0).box(L - .6, .056, .01, lavaHot, (L - .6) / 2 + .1, 0, 0).build(k.bladeG, 0);
+  // 몸에서 피어오르는 불씨 (월드 좌표 Points 1개)
+  const NP = 70, pos = new Float32Array(NP * 3), life = new Float32Array(NP), vel = new Float32Array(NP * 3);
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const x2 = c.getContext('2d'), gr = x2.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gr.addColorStop(0, 'rgba(255,240,200,1)'); gr.addColorStop(.35, 'rgba(255,140,40,.8)'); gr.addColorStop(1, 'rgba(255,60,0,0)');
+  x2.fillStyle = gr; x2.fillRect(0, 0, 32, 32);
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pm = new THREE.PointsMaterial({ size: .16, map: new THREE.CanvasTexture(c), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const pts = new THREE.Points(pg, pm); pts.frustumCulled = false; scene.add(pts);
+  for (let i = 0; i < NP; i++){ life[i] = -Math.random() * 2; pos[i * 3 + 1] = -50; }
+  // 갑옷 원래 색 (그을림은 이 색에 곱함)
+  const armor = new Set();
+  k.root.traverse(o => { const m = o.material; if (o.isMesh && !o.userData.outline && m && m.isMeshStandardMaterial && m.metalness >= .3 && m !== k.steel) armor.add(m); });
+  const base = [...armor].map(m => [m, m.color.clone()]);
+  const eye0 = k.eyeM.color.clone();
+  let P2 = 0, F = 0, lastP = -1;
+  return {
+    set(p, flare){ P2 = p; F = flare; },
+    update(dt, t){
+      const on = P2 > .001;
+      lava.opacity = P2 * (.75 + .25 * Math.sin(t * 5)) + F * .2; lavaHot.opacity = P2 * (.6 + .4 * Math.sin(t * 7 + 1));
+      flameM.opacity = P2 * .85; flameIn.opacity = P2 * .9; pm.opacity = P2;
+      const fl = .8 + .25 * Math.sin(t * 11) + .12 * Math.sin(t * 23);
+      crown.scale.set(1 + F * .5, (fl + F * 1.4) * P2 + .001, 1 + F * .5); crown.rotation.y += dt * (.6 + F * 4);
+      if (Math.abs(P2 - lastP) > .002){ lastP = P2; for (const [m, c0] of base) m.color.copy(c0).multiplyScalar(1 - .55 * P2); }
+      k.eyeM.color.setRGB(eye0.r + (1 - eye0.r) * P2, eye0.g * (1 - .85 * P2), eye0.b * (1 - .95 * P2));
+      pts.visible = on; if (!on) return;
+      const n = GFX.light ? 28 : NP, r = k.root.position; pg.setDrawRange(0, n);
+      for (let i = 0; i < n; i++){
+        life[i] -= dt;
+        if (life[i] <= 0){
+          life[i] = (1 + Math.random() * 1.4) / (1 + F);
+          const a = Math.random() * TAU, rr = Math.random() * .55 * S3;
+          pos[i * 3] = r.x + Math.cos(a) * rr; pos[i * 3 + 1] = r.y + (.4 + Math.random() * 1.5) * S3; pos[i * 3 + 2] = r.z + Math.sin(a) * rr;
+          vel[i * 3] = (Math.random() - .5) * .6; vel[i * 3 + 1] = .8 + Math.random() * 1.2 + F * 2; vel[i * 3 + 2] = (Math.random() - .5) * .6;
+        }
+        pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] += vel[i * 3 + 1] * dt; pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
+      }
+      pg.attributes.position.needsUpdate = true;
+    }
+  };
+}
+
 function buildBossKnight(o){
   const C = PALETTE_BOSS, env = envTexture(), mtex = metalTexture(11, true), ctex = clothTexture(13);
   const steel = new THREE.MeshStandardMaterial({ color: C.steel, map: mtex, metalness: .7, roughness: .5, envMap: env, envMapIntensity: .6 });
@@ -1250,6 +1359,7 @@ function initScene(){
   bossRig = buildBossKnight({ scale: 2.25, blade: 1.95,
     rest: { rs: [-.2, -.1, .45], re: .7, rw: [0, 0, -1.75], ls: [.3, 0, .35], le: .45 } });
   bossLight = new THREE.PointLight(0xff7a30, 0, 10, 2); bossLight.position.set(.2, .65, 0); bossRig.spine.add(bossLight);
+  bossP2 = addBossP2(bossRig);
   healLight = new THREE.PointLight(0xe8b45a, 0, 5, 2); healLight.position.set(.05, -.1, 0); playerRig.armL.wr.add(healLight);
 
   // 공격 예고 표시 (바닥)
@@ -1259,7 +1369,28 @@ function initScene(){
     ring: flatMesh(new THREE.RingGeometry(.95, 1, 72), 0xd9472b, .6),
     fill: flatMesh(new THREE.CircleGeometry(1, 56), 0xd9472b, .22),
     nova: flatMesh(new THREE.RingGeometry(.86, 1, 72), 0xe0703a, .5),
+    lines: [0, 1, 2].map(() => flatMesh(new THREE.PlaneGeometry(1, 1).translate(.5, 0, 0), 0xe0703a, .2)),
   };
+
+  // 불꽃 내려찍기의 불길 줄기: 바닥 띠 + 머리의 불기둥(교차한 세로 판 2장). 미리 만들어 두고 켜고 끄기만 함
+  {
+    const grad = (w, h, stops, vertical) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+      const g = vertical ? x.createLinearGradient(0, h, 0, 0) : x.createLinearGradient(0, 0, w, 0); stops.forEach(([o, col]) => g.addColorStop(o, col));
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      const e = x.createLinearGradient(0, 0, vertical ? w : 0, vertical ? 0 : h);   // 가장자리 부드럽게
+      e.addColorStop(0, 'rgba(0,0,0,1)'); e.addColorStop(.3, 'rgba(0,0,0,0)'); e.addColorStop(.7, 'rgba(0,0,0,0)'); e.addColorStop(1, 'rgba(0,0,0,1)');
+      x.globalCompositeOperation = 'destination-out'; x.fillStyle = e; x.fillRect(0, 0, w, h); return new THREE.CanvasTexture(c); };
+    const trailTex = grad(128, 16, [[0, 'rgba(120,20,0,0)'], [.6, 'rgba(255,90,20,.7)'], [1, 'rgba(255,200,90,1)']]);
+    const flameTex = grad(16, 64, [[0, 'rgba(255,210,120,1)'], [.4, 'rgba(255,100,20,.8)'], [1, 'rgba(160,20,0,0)']], true);
+    const add = (map) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    fireFx = [0, 1, 2].map(() => {
+      const g = new THREE.Group(); g.visible = false; scene.add(g);
+      const trail = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(-.5, 0, 0), add(trailTex)); trail.rotation.x = -Math.PI / 2; trail.position.y = .06; g.add(trail);
+      const fm = add(flameTex), wall = new THREE.Group(); g.add(wall);
+      for (const ry of [0, Math.PI / 2]){ const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0, .5, 0), fm); m.rotation.y = ry; wall.add(m); }
+      return { g, trail, wall };
+    });
+  }
 
   // 불씨·불꽃 입자
   partGeo = new THREE.BufferGeometry();
@@ -1410,6 +1541,9 @@ const SND = (() => {
     bossSwing(){ noise({ f: 420, f2: 120, d: .55, v: .75, q: .9, a: .07 }); tone({ f: 70, f2: 36, d: .5, v: .35, a: .05 }); tone({ type: 'sawtooth', f: 55, f2: 35, d: .45, v: .1, lp: 240 }); },
     dash(){ noise({ ft: 'lowpass', f: 320, d: .55, v: .6, a: .05 }); tone({ f: 55, f2: 38, d: .55, v: .3 }); },
     slam(){ const t = ctx.currentTime; noise({ ft: 'highpass', f: 1200, d: .04, v: .8, t }); tone({ f: 80, f2: 24, d: 1.3, v: 1.2, t }); crunch({ f: 300, d: .5, v: .8, t }); noise({ ft: 'lowpass', f: 1400, f2: 70, d: 1.1, v: 1, wet: .6, t }); },
+    // 큰 기술 신호: 불길이 빨려 들어가며 치솟는 소리
+    flare(){ noise({ f: 180, f2: 1400, d: 1.0, v: .5, q: .9, a: .5, wet: .5 }); tone({ type: 'sawtooth', f: 45, f2: 110, d: 1.0, v: .14, lp: 500, a: .5 }); },
+    fireLine(){ noise({ ft: 'highpass', f: 1800, f2: 900, d: .9, v: .35, a: .02, wet: .4 }); noise({ ft: 'lowpass', f: 600, f2: 200, d: 1.0, v: .5, a: .05 }); },
     nova(){ noise({ f: 280, f2: 2200, d: .75, v: .45, q: .8, wet: .5 }); tone({ type: 'sawtooth', f: 90, f2: 200, d: .75, v: .16, lp: 700 }); },
     roar(){
       tone({ type: 'sawtooth', f: 88, f2: 64, d: 1.6, v: .4, lp: 800, lp2: 260, q: 5, a: .15, wet: .6 });
@@ -1665,25 +1799,26 @@ function moveVec(){
 }
 
 // ---------- 상태 ----------
-let P, B, waves, parts, freeze = 0, shake = 0, TOK = 0;
+let P, B, waves, fires = [], parts, freeze = 0, shake = 0, TOK = 0;
 const game = { state:'title', t:0, endT:0, deaths:0, diff:'normal' };
 try { const d = localStorage.getItem('oa-soul-diff'); if (d && DIFFICULTY[d]) game.diff = d; } catch(e) {}
 try { game.deaths = +localStorage.getItem('ashen-knight-deaths') || 0; } catch(e) {}
 
 function makePlayer(){
   return { x: AR.x, y: AR.y + 230, vx:0, vy:0, r:13, face:-Math.PI/2, hp:100, max:100, chip:100, chipT:0,
-    st:100, stMax:100, stDelay:0, state:'idle', t:0, atk:null, combo:0, roll:null, flasks:3, flasksUsed:0, parries:0, healDone:false,
+    st:100, stMax:100, stDelay:0, state:'idle', t:0, atk:null, combo:0, roll:null, flasks:3, flasksUsed:0, parries:0, healDone:false, rolls:[],
     lastTok:-1, flash:0, trail:[] };
 }
 function makeBoss(key){
   const D = BOSSES[key];
   return { D, x: AR.x, y: AR.y - 170, vx:0, vy:0, r:D.r, face:Math.PI/2, hp:D.hp, max:D.hp, chip:D.hp, chipT:0,
     poise:D.poise, poiseT:0, phase:0, state:'intro', t:0, cool:.6, last:null, pat:null, stepI:0, sp:null,
-    z:0, dmgAcc:0, dmgT:0, flash:0, roared:false, strafe:1 };
+    z:0, dmgAcc:0, dmgT:0, flash:0, roared:false, strafe:1,
+    p2n:0, bigWait:0, noCount:false, desperateDone:false, healSeen:0 };
 }
 const hittable = b => b.state !== 'roar' && b.state !== 'dead' && b.z < .3;
 
-function reset(){ P = makePlayer(); B = makeBoss('knight'); waves = []; parts = []; freeze = 0; shake = 0; camYaw = -Math.PI / 2; }
+function reset(){ P = makePlayer(); B = makeBoss('knight'); waves = []; fires = []; parts = []; freeze = 0; shake = 0; camYaw = -Math.PI / 2; }
 function startFight(){ SND.init(); SND.setIntensity(0); SND.music(null); SND.music('boss'); reset();
   P.y = AR.y + INTRO.fromY; game.introT = (INTRO.fromY - INTRO.toY) / INTRO.speed; envP2 = 0;
   burst(P.x, P.y - 6, 26, '#e8ecf0', 90, .9, 2.5);   // 안개를 헤치고 나옴
@@ -1730,7 +1865,7 @@ function startAttack(kind){
 function startRoll(mv){
   let dx = mv.x, dy = mv.y;
   if (!mv.len){ dx = -Math.cos(P.face); dy = -Math.sin(P.face); }
-  P.roll = { dx, dy, t:0, back: !mv.len }; SND.fx('roll'); P.state = 'roll'; P.t = 0; P.atk = null;
+  P.roll = { dx, dy, t:0, back: !mv.len }; P.rolls.push(game.t); if (P.rolls.length > 8) P.rolls.shift(); SND.fx('roll'); P.state = 'roll'; P.t = 0; P.atk = null;
   P.st = Math.max(0, P.st - 24); P.stDelay = .55;
 }
 function parrySuccess(token){
@@ -1866,9 +2001,25 @@ function damageBoss(dmg, poise){
 }
 
 function pickPattern(b, d){
-  const ph = b.D.phases[b.phase], list = [];
+  const ph = b.D.phases[b.phase];
+  if (ph.rules) return pickRuled(b, d, ph.rules);
+  return pickWeighted(b, d, ph.patterns);
+}
+// 규칙 있는 페이즈: 필살기(1번) → 큰 기술 차례면 큰 기술(멀면 쫓아가다 도약) → 아니면 거리 묶음에서 고름
+function pickRuled(b, d, R){
+  if (R.desperate && !b.desperateDone && b.hp <= b.max * R.desperateAt){ b.desperateDone = true; return R.desperate; }
+  if (b.p2n >= R.cycle){
+    if (d <= PATTERNS[R.big].range[1]) return R.big;
+    if (b.bigWait > R.bigChaseMax){ b.bigWait = 0; b.noCount = true; return R.bigFar; }
+    return null;
+  }
+  const band = R.bands.find(x => d < x.below) || R.bands[R.bands.length - 1];
+  return pickWeighted(b, d, band.patterns);
+}
+function pickWeighted(b, d, patterns){
+  const list = [];
   let total = 0;
-  for (const [name, w0] of Object.entries(ph.patterns)){
+  for (const [name, w0] of Object.entries(patterns)){
     const pt = PATTERNS[name];
     if (d < pt.range[0] || d > pt.range[1]) continue;
     const w = w0 * (name === b.last ? .3 : 1); list.push([name, w]); total += w;
@@ -1878,7 +2029,15 @@ function pickPattern(b, d){
   for (const [name, w] of list){ if ((r -= w) <= 0) return name; }
   return list[list.length - 1][0];
 }
-function startPattern(b, name){ b.pat = PATTERNS[name]; b.last = name; b.stepI = 0; b.state = 'attack'; b.t = 0; startStep(b); }
+function startPattern(b, name){
+  b.pat = PATTERNS[name]; b.last = name; b.stepI = 0; b.state = 'attack'; b.t = 0;
+  if (b.D.phases[b.phase].rules){
+    if (b.pat.big){ b.p2n = 0; b.bigWait = 0; SND.fx('flare'); }
+    else if (!b.noCount) b.p2n++;
+    b.noCount = false;
+  }
+  startStep(b);
+}
 function startStep(b){ const s = b.pat.steps[b.stepI]; b.sp = { s, phase:'wind', t:0, token: ++TOK, side: s.side || (b.stepI % 2 ? -1 : 1) }; }
 function nextStep(b, tempo){
   b.stepI++; b.vx = b.vy = 0;
@@ -1886,15 +2045,27 @@ function nextStep(b, tempo){
   else { b.state = 'rec'; b.t = 0; b.recDur = b.pat.rec / tempo; b.sp = null; }
 }
 
+// 불꽃 내려찍기: 보스 앞쪽 부채꼴로 불길 줄기가 뻗어 나감 (줄기 머리에 닿으면 피해, 패링 불가)
+function fireLineDirs(b, s){ const out = []; for (let i = 0; i < s.lines; i++) out.push(b.face + (i - (s.lines - 1) / 2) * s.spread); return out; }
+function spawnFireLines(b, s){
+  SND.fx('slam'); SND.fx('fireLine'); shake = Math.max(shake, 12);
+  const ox = b.x + Math.cos(b.face) * 60, oy = b.y + Math.sin(b.face) * 60;
+  burst(ox, oy, 24, '#ff7a2a', 260, .6, 3);
+  for (const a of fireLineDirs(b, s))
+    fires.push({ x: ox, y: oy, a, d: 0, speed: s.lineSpeed, len: s.lineLen, r: s.lineR, dmg: s.lineDmg, token: b.sp.token });   // 내려찍기와 같은 토큰: 한 번만 맞음
+}
 function runStep(b, dt, tempo){
   const sp = b.sp, s = sp.s; sp.t += dt;
   const wind = s.wind / tempo, toP = Math.atan2(P.y - b.y, P.x - b.x);
-  if (s.type === 'swing'){
+  if (s.type === 'swing' || s.type === 'flameSlam'){
     if (sp.phase === 'wind'){
       if (sp.t < wind * .8) b.face = turn(b.face, toP, s.track * dt);
       const adv = dist(b, P) > s.range * .7 ? 60 : 0;
       b.vx = Math.cos(b.face) * adv; b.vy = Math.sin(b.face) * adv;
-      if (sp.t >= wind){ sp.phase = 'active'; sp.t = 0; SND.fx('bossSwing'); }
+      if (sp.t >= wind){
+        sp.phase = 'active'; sp.t = 0; SND.fx('bossSwing');
+        if (s.type === 'flameSlam') spawnFireLines(b, s);
+      }
     } else {
       b.vx = Math.cos(b.face) * s.lunge; b.vy = Math.sin(b.face) * s.lunge;
       const k = Math.min(1, sp.t / .16), side = (MOTIONS[s.motion] || MOTIONS.diagonal).sweep;
@@ -1961,6 +2132,17 @@ function updateBoss(dt){
       b.face = turn(b.face, toP, 4 * dt);
       if (playerDown){ b.vx = b.vy = 0; break; }
       b.cool -= dt;
+      const R = ph.rules;
+      if (R){
+        if (b.p2n >= R.cycle) b.bigWait += dt;
+        // ⑤ 응징: 멀리서 에스트를 마시면 돌진 베기, 구르기를 남발하면 불꽃 파동
+        if (R.punishHeal && P.state === 'heal' && b.healSeen !== P.flasksUsed && d > R.punishHealMin){
+          b.healSeen = P.flasksUsed; b.noCount = true; startPattern(b, R.punishHeal); break;
+        }
+        if (R.punishRoll && b.cool < .3 && d < 300 && P.rolls.filter(t => game.t - t < R.rollWindow).length >= R.rollSpam){
+          P.rolls.length = 0; b.noCount = true; startPattern(b, R.punishRoll); break;
+        }
+      }
       if (b.cool <= 0){ const name = pickPattern(b, d); if (name){ startPattern(b, name); break; } }
       const sp = b.D.speed * (ph.speedMul || 1) * DIFF().speed;
       if (d > 85){ b.vx = Math.cos(toP) * sp; b.vy = Math.sin(toP) * sp; }
@@ -2006,6 +2188,18 @@ function updateWorld(dt){
     if (Math.abs(d - w.r) < w.thick / 2 + P.r * .5) hurtPlayer(w.dmg, w, w.token, w.kb);
   }
   waves = waves.filter(w => w.r < w.maxR);
+  for (const f of fires){
+    f.d += f.speed * dt;
+    const x = f.x + Math.cos(f.a) * f.d, y = f.y + Math.sin(f.a) * f.d;
+    f.out = f.d > f.len || Math.hypot(x - AR.x, y - AR.y) > AR.r - 4;
+    if (f.out) continue;
+    if (Math.hypot(P.x - x, P.y - y) < f.r + P.r * .6) hurtPlayer(f.dmg, { x: x - Math.cos(f.a) * 20, y: y - Math.sin(f.a) * 20 }, f.token, 260);
+    if (Math.random() < (GFX.light ? .35 : .7))
+      parts.push({ x: x + (Math.random() - .5) * 16, y: y + (Math.random() - .5) * 16, h: 4, vx: Math.cos(f.a) * 30, vy: Math.sin(f.a) * 30,
+        vh: 40 + Math.random() * 70, g: 30, t: 0, life: .3 + Math.random() * .3, c: FIRE_C[Math.random() < .6 ? 0 : 1], drag: 2 });
+    if (Math.random() < .5) parts.push({ x: x - Math.cos(f.a) * 20, y: y - Math.sin(f.a) * 20, h: 2, vx: 0, vy: 0, vh: 20 + Math.random() * 30, g: 0, t: 0, life: .7 + Math.random() * .4, c: FIRE_C[2], drag: 0 });
+  }
+  fires = fires.filter(f => !f.out);
   for (const p of parts){ p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.h += p.vh * dt; p.vh -= p.g * dt; if (p.h < 0){ p.h = 0; p.vh = 0; } if (p.drag){ p.vx *= Math.exp(-p.drag * dt); p.vy *= Math.exp(-p.drag * dt); } }
   parts = parts.filter(p => p.t < p.life);
   const rate = (B.phase ? 30 : 10) * (GFX.light ? .5 : 1);
@@ -2093,7 +2287,7 @@ function updateScene(dt){
   const phase2 = b.phase > 0;
   if (b.state === 'attack' && b.sp){
     const sp = b.sp, s = sp.s, tempo = (ph.tempo || 1) * DIFF().tempo, kw = clamp(sp.t / (s.wind / tempo), 0, 1);
-    if (s.type === 'swing'){
+    if (s.type === 'swing' || s.type === 'flameSlam'){
       const mo = MOTIONS[s.motion] || MOTIONS.diagonal; b.lastMotion = s.motion || 'diagonal';
       if (sp.phase === 'wind'){ bTarget = motionPose(br.rest, mo, 'wind', kw); bRate = 30; }
       else { bTarget = motionPose(br.rest, mo, 'active', sp.t / .16); bRate = Infinity; bTrail = true; }
@@ -2118,12 +2312,16 @@ function updateScene(dt){
   else if (b.state === 'stagger'){ bTarget = mkPose(POSES.stagger, br.rest); bRate = 18; brz = -.3 + Math.sin(b.t * 30) * .05 * (1 - b.t / 1.6); bRigY = .7; }
   else if (b.state === 'dead'){ const k = Math.min(1, b.t / 1.4); brz = -k * 1.45; bRigY = lerp(.95, .35, k); bTarget = mkPose(POSES.stagger, br.rest); bRate = 6; }
   const sink = b.state === 'dead' ? Math.max(0, b.t - 2.2) * .9 : 0;
-  br.armor.emissive.setHex(b.flash > 0 ? 0x553a2a : (phase2 ? 0x2a0c02 : 0x000000));
-  br.eyeM.color.setHex(phase2 ? 0xff8a3d : 0xd8cfbc);
+  br.armor.emissive.setHex(b.flash > 0 ? 0x553a2a : (phase2 ? 0x0c0200 : 0x000000));
   br.steel.emissive.setHex(phase2 ? 0x3a1203 : 0x000000);
+  // 2페이즈 외형 (배경과 같이 포효 순간부터 서서히) + 큰 기술 예비동작 동안 불꽃 왕관이 커짐
+  const bigWind = b.state === 'attack' && b.pat && b.pat.big && b.sp && b.sp.phase === 'wind';
+  b.flareK = lerp(b.flareK || 0, bigWind ? 1 : 0, Math.min(1, dt * (bigWind ? 6 : 3)));
+  bossP2.set(envP2 * (b.state === 'dead' ? Math.max(0, 1 - b.t / 2.5) : 1), b.flareK);
+  bossP2.update(dt, now);
   if (br.ember) br.ember.emissiveIntensity = b.state === 'dead' ? Math.max(0, .25 - b.t * .1) : phase2 ? 1.6 + Math.sin(now * 6) * .5 : .3 + Math.sin(now * 2) * .08;
   br.trail.col.setHex(phase2 ? 0xff9a50 : 0xf3e3c3);
-  bossLight.intensity = phase2 && b.state !== 'dead' ? 2.2 + Math.sin(now * 7) * .5 : 0;
+  bossLight.intensity = phase2 && b.state !== 'dead' ? 1.1 + Math.sin(now * 7) * .3 + (b.flareK || 0) * 1.6 : 0;
   poseKnight(br, { visible: !(b.state === 'dead' && b.t > 4), x: b.x, y: b.y, heading: b.face + (b.state === 'stagger' ? .3 : 0),
     rz: brz, rx: brx, rigY: bRigY, lift: b.z * 3.6 - sink, speed: b.state === 'dead' ? 0 : Math.hypot(b.vx, b.vy), dt, stride: 1.6 });
   driveRig(br, bTarget, bRate, dt);
@@ -2132,9 +2330,16 @@ function updateScene(dt){
 
   // ---- 공격 예고
   for (const key of ['cone', 'rect', 'ring', 'fill', 'nova']) tele[key].g.visible = false;
+  for (const t of tele.lines) t.g.visible = false;
   if (b.state === 'attack' && b.sp && DIFF().telegraph){
     const sp = b.sp, s = sp.s, tempo = (ph.tempo || 1) * DIFF().tempo, k = clamp(sp.t / (s.wind / tempo), 0, 1);
-    if (s.type === 'swing' && sp.phase === 'wind'){
+    if (s.type === 'flameSlam' && sp.phase === 'wind'){
+      const ox = b.x + Math.cos(b.face) * 60, oy = b.y + Math.sin(b.face) * 60;
+      fireLineDirs(b, s).forEach((a, i) => { const t = tele.lines[i]; if (!t) return;
+        t.g.visible = true; t.g.position.set(toX(ox), .045, toZ(oy)); t.g.rotation.y = -a;
+        t.m.scale.set(s.lineLen * S * k, s.lineR * 2 * S, 1); t.m.material.opacity = .08 + .22 * k; });
+    }
+    if ((s.type === 'swing' || s.type === 'flameSlam') && sp.phase === 'wind'){
       const key = s.range + '|' + s.arc;
       if (tele.coneKey !== key){ tele.coneKey = key; tele.cone.m.geometry.dispose(); tele.cone.m.geometry = new THREE.CircleGeometry((s.range + 8) * S, 40, -s.arc / 2, s.arc); }
       const t = tele.cone; t.g.visible = true; t.g.position.set(toX(b.x), .04, toZ(b.y)); t.g.rotation.y = -b.face; t.m.material.opacity = .06 + .24 * k;
@@ -2151,6 +2356,16 @@ function updateScene(dt){
       t.m.scale.setScalar((b.r + 30 * (1 - k) + 6) * S * 1.4); t.m.material.opacity = .3 + .5 * k;
     }
   }
+
+  // ---- 불길 줄기
+  fireFx.forEach((fx, i) => {
+    const f = fires[i]; fx.g.visible = !!f; if (!f) return;
+    const hx = f.x + Math.cos(f.a) * f.d, hy = f.y + Math.sin(f.a) * f.d, tl = Math.min(f.d, 150);
+    fx.g.position.set(toX(hx), 0, toZ(hy)); fx.g.rotation.y = -f.a;
+    fx.trail.scale.set(Math.max(.01, tl * S), f.r * 2.2 * S, 1);
+    const fl = 1 + Math.sin(now * 30 + i * 2) * .12;
+    fx.wall.scale.set(f.r * 2.4 * S, (1.3 + .2 * Math.sin(now * 17 + i)) * fl, f.r * 2.4 * S);
+  });
 
   // ---- 충격파
   for (const [w, m] of waveMeshes) if (!waves.includes(w)){ scene.remove(m); m.geometry.dispose(); m.material.dispose(); waveMeshes.delete(w); }
