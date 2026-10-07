@@ -140,7 +140,7 @@ html.mobile.show-board .bclose{display:inline-block}
   <header>
     <h1>OA Soul<small>CHAPTER I · ASHEN KNIGHT</small></h1>
     <div class="hright">
-      <div class="ver"><b id="verTag">BETA 0.3</b> · 락온 3인칭 시점 · 순위표</div>
+      <div class="ver"><b id="verTag">BETA 0.3.1</b> · 락온 3인칭 시점 · 순위표</div>
       <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
       <div class="mode" role="group" aria-label="조작 모드">
         <button id="modePc" aria-pressed="true">PC</button>
@@ -201,7 +201,7 @@ html.mobile.show-board .bclose{display:inline-block}
     <span><kbd>R</kbd> 재도전</span>
     <span><kbd>M</kbd> 소리 켜기/끄기</span>
   </div>
-  <p class="note">PC는 키보드로, 휴대폰·태블릿은 오른쪽 위 <b>모바일</b> 모드로 플레이합니다. 카메라는 항상 보스를 바라보는 락온 상태입니다. 구르기 초반에는 무적 시간이 있고, 보스의 베기·돌진은 맞기 직전에 패링하면 보스가 무너져 치명타를 넣을 수 있습니다(점프 내려찍기·충격파는 패링 불가). 보스에게 피해를 계속 주면 자세가 무너져 큰 피해를 받습니다.<br>점수 = 보스에게 준 피해 + 처치 보너스 1,000 + 남은 에스트 1병당 150 (보스를 쓰러뜨렸을 때만). 난이도는 타이틀 화면에서 고릅니다.</p>
+  <p class="note">PC는 키보드로, 휴대폰·태블릿은 오른쪽 위 <b>모바일</b> 모드로 플레이합니다. 카메라는 항상 보스를 바라보는 락온 상태입니다. 구르기 초반에는 무적 시간이 있고, 보스의 베기·돌진은 맞기 직전에 패링하면 보스가 무너져 치명타를 넣을 수 있습니다(점프 내려찍기·충격파는 패링 불가). 보스에게 피해를 계속 주면 자세가 무너져 큰 피해를 받습니다.<br>점수 = 보스에게 준 피해 + 처치 보너스 1,000 + 남은 에스트 1병당 150 + 시간 보너스 (5분 − 처치 시간) 1초당 5점. 에스트·시간 보너스는 보스를 쓰러뜨렸을 때만 받습니다. 난이도는 타이틀 화면에서 고릅니다.</p>
 
   <section class="board" aria-labelledby="boardTitle">
     <header>
@@ -229,7 +229,7 @@ html.mobile.show-board .bclose{display:inline-block}
 //    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
 // 게임 버전 (화면 표시용). 버전 기록은 CHANGELOG.md 참고
-const GAME_VERSION = 'BETA 0.3';
+const GAME_VERSION = 'BETA 0.3.1';
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
 
@@ -2027,14 +2027,17 @@ function draw(dt){
 // =====================================================================
 //  점수 — 보스에게 준 피해 + 아낀 에스트 보너스 + 처치 보너스
 // =====================================================================
-const SCORE = { perFlaskSaved: 150, winBonus: 1000 };
+// timeLimit초 안에 처치하면 남은 1초당 perSecond점 (예: 90초 처치 → (300−90)×5 = 1,050점)
+const SCORE = { perFlaskSaved: 150, winBonus: 1000, timeLimit: 300, perSecond: 5 };
 function calcScore(){
   const dmg = Math.round(B.max - B.hp);
   const saved = 3 - P.flasksUsed, won = game.state === 'won';
   // 남은 에스트는 보스를 쓰러뜨렸을 때만 점수로 인정 (죽으면 0)
   const flaskPts = won ? saved * SCORE.perFlaskSaved : 0;
   const winPts = won ? SCORE.winBonus : 0;
-  return { dmg, saved, used: P.flasksUsed, won, flaskPts, winPts, total: dmg + flaskPts + winPts, time: Math.floor(game.t),
+  const time = Math.floor(game.t);
+  const timePts = won ? Math.max(0, SCORE.timeLimit - time) * SCORE.perSecond : 0;   // 처치 시간 보너스
+  return { dmg, saved, used: P.flasksUsed, won, flaskPts, winPts, timePts, total: dmg + flaskPts + winPts + timePts, time,
     diff: game.diff, cleared: won ? B.D.chapter : B.D.chapter - 1, boss: 'knight' };
 }
 const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -2159,6 +2162,7 @@ function showResult(){
   [[`보스에게 준 피해 (${s.dmg.toLocaleString()} / ${B.max.toLocaleString()})`, '+' + s.dmg.toLocaleString()],
    [s.won ? `남은 에스트 ${s.saved}병` : '남은 에스트 (처치해야 인정)', s.won ? '+' + s.flaskPts.toLocaleString() : '—'],
    ['처치 보너스', s.won ? '+' + s.winPts.toLocaleString() : '—'],
+   [s.won ? `시간 보너스 (${SCORE.timeLimit}초 − ${s.time}초) × ${SCORE.perSecond}` : '시간 보너스 (처치해야 인정)', s.won ? '+' + s.timePts.toLocaleString() : '—'],
    ['패링 성공', `${P.parries}회`],
    ['전투 시간', fmtTime(s.time)]].forEach(([k, v]) => {
     const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('b');
