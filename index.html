@@ -157,7 +157,7 @@ html.mobile.show-board .bclose{display:inline-block}
   <header>
     <h1>OA Soul<small>CHAPTER I – II · ASH AND EMBER</small></h1>
     <div class="hright">
-      <div class="ver"><b id="verTag">BETA 0.6.4</b> · 락온 3인칭 시점 · 순위표</div>
+      <div class="ver"><b id="verTag">BETA 0.6.5</b> · 락온 3인칭 시점 · 순위표</div>
       <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
       <button class="sndbtn gfxbtn" type="button" aria-pressed="false">그래픽: 보통</button>
       <div class="mode" role="group" aria-label="조작 모드">
@@ -252,10 +252,10 @@ html.mobile.show-board .bclose{display:inline-block}
 //    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
 // 게임 버전 (화면 표시용). 버전 기록은 CHANGELOG.md 참고
-const GAME_VERSION = 'BETA 0.6.4';
-// 명예의 전당 버전: 기본은 현재 버전만, '지난 버전'을 누르면 예전 버전 기록 조회 (새 버전을 낼 때 맨 앞에 추가)
+const GAME_VERSION = 'BETA 0.6.5';
+// 명예의 전당 버전: 기본은 현재 버전만, '지난 버전'을 누르면 기록이 남아 있는 예전 버전 조회
 const GAME_VER = GAME_VERSION.replace(/^BETA\s*/i, '');
-const BOARD_VERSIONS = [GAME_VER, '0.6.3', '0.6.2', '0.6.1', '0.6', '0.5.3', '0.5.2', '0.5.1'];
+
 const LEGACY_VER = '0.5.1';   // 버전 정보가 없던 기록은 0.5.1로 봄
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
@@ -3482,7 +3482,7 @@ async function initStore(){
   if (SUPABASE_URL && SUPABASE_KEY && window.supabase){
     store.mode = 'supa';
     store.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-    await loadSupa();
+    await loadSupa(); loadVersions();
     setInterval(() => { if (!document.hidden) loadSupa(); }, 30000);
     return;
   }
@@ -3519,6 +3519,7 @@ async function saveScore(entry){
     if (!store.noVer) cq = cq.eq('game_ver', row.gv);
     const { count } = await cq;
     row.rank = (count || 0) + 1;
+    (store.verSet = store.verSet || new Set()).add(row.gv);
     return row;
   }
   if (store.mode === 'db'){
@@ -3566,10 +3567,20 @@ function renderBoard(){
 }
 
 // 버전 선택: [현재 버전 0.5.2] [지난 버전 ▾] → 누르면 예전 버전 단추들이 펼쳐짐
+// 기록이 실제로 남아 있는 버전만 (현재 버전은 기록이 없어도 늘 표시)
 function knownVersions(){
-  const set = new Set(BOARD_VERSIONS);
-  if (store.mode !== 'supa') store.rows.forEach(r => set.add(r.gv));
+  const set = new Set([GAME_VER]);
+  if (store.mode === 'supa') (store.verSet || []).forEach(v => set.add(v));
+  else store.rows.forEach(r => set.add(r.gv));
   return [...set].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+}
+// Supabase: 기록이 있는 버전 목록 (game_ver 칸만 가볍게 읽음)
+async function loadVersions(){
+  if (store.mode !== 'supa' || store.noVer) return;
+  const { data, error } = await store.sb.from('scores').select('game_ver').limit(5000);
+  if (error) return;
+  store.verSet = new Set(data.map(r => r.game_ver).filter(v => typeof v === 'string' && /^[0-9.]{1,12}$/.test(v)));
+  renderVerFilter();
 }
 function renderVerFilter(){
   const f = document.getElementById('verFilter'); if (!f) return;
