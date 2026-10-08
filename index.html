@@ -152,7 +152,7 @@ html.mobile.show-board .bclose{display:inline-block}
   <header>
     <h1>OA Soul<small>CHAPTER I · ASHEN KNIGHT</small></h1>
     <div class="hright">
-      <div class="ver"><b id="verTag">BETA 0.5.2</b> · 락온 3인칭 시점 · 순위표</div>
+      <div class="ver"><b id="verTag">BETA 0.5.3</b> · 락온 3인칭 시점 · 순위표</div>
       <button class="sndbtn" type="button" aria-pressed="true">소리 켬</button>
       <button class="sndbtn gfxbtn" type="button" aria-pressed="false">그래픽: 보통</button>
       <div class="mode" role="group" aria-label="조작 모드">
@@ -244,10 +244,10 @@ html.mobile.show-board .bclose{display:inline-block}
 //    service_role / secret 키는 절대 넣지 마세요. 공개 키(anon / publishable)만 넣습니다.
 // =====================================================================
 // 게임 버전 (화면 표시용). 버전 기록은 CHANGELOG.md 참고
-const GAME_VERSION = 'BETA 0.5.2';
+const GAME_VERSION = 'BETA 0.5.3';
 // 명예의 전당 버전: 기본은 현재 버전만, '지난 버전'을 누르면 예전 버전 기록 조회 (새 버전을 낼 때 맨 앞에 추가)
 const GAME_VER = GAME_VERSION.replace(/^BETA\s*/i, '');
-const BOARD_VERSIONS = [GAME_VER, '0.5.1'];
+const BOARD_VERSIONS = [GAME_VER, '0.5.2', '0.5.1'];
 const LEGACY_VER = '0.5.1';   // 버전 정보가 없던 기록은 0.5.1로 봄
 const SUPABASE_URL = 'https://cziftmujylbgkjslwefp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_TyPdHTpnbvV5kvkinPo65Q_WNZ-1XSm';
@@ -315,7 +315,7 @@ const PATTERNS = {
                                                {type:'swing', motion:'slashL', wind:.32, arc:2.1, range:110, dmg:20, lunge:220, track:4.5},
                                                {type:'swing', motion:'thrust', wind:.6, arc:.55, range:150, dmg:28, lunge:460, track:3.4} ] },
   // 불꽃 내려찍기: 검을 높이 들고(왕관 불꽃 커짐) 내려찍으면 앞쪽 부채꼴로 불길 3줄기. 줄기 사이 틈이나 옆으로 피하기
-  flameSlam:  { range:[0,240], rec:1.9, big:true, steps:[ {type:'flameSlam', motion:'overhead', wind:1.05, arc:.95, range:130, dmg:36, lunge:160, track:2.4,
+  flameSlam:  { range:[0,240], rec:1.9, big:true, steps:[ {type:'flameSlam', unparry:true, motion:'overhead', wind:1.05, arc:.95, range:130, dmg:36, lunge:160, track:2.4,
                                                lines:3, spread:.5, lineSpeed:360, lineLen:560, lineR:20, lineDmg:24} ] },
   // 필살기 (체력 30% 이하 1번): 검을 꽂고 불꽃 파동 3연속
   inferno:    { range:[0,9999], rec:2.0, big:true, steps:[ {type:'nova', wind:1.2, speed:250, thick:26, dmg:22},
@@ -329,12 +329,17 @@ const DIFFICULTY = {
 //   armor: 보스가 기술 중 맞아도 끊기지 않는 구간 ('active' = 휘두르는 순간만, 'full' = 예비동작부터 끝까지)
 //   poiseMul/poiseRegen: 보스 강인도(비틀거리기까지 버티는 양)와 회복 속도 배율, staggerMul: 비틀거리는 보스에게 주는 피해 배율
 //   stomp: 붙어서 연속으로 hits번 맞으면 발 구르기 (follow = 이어서 바로 베기), backSlash: 등 뒤에 이 초만큼 붙어 있으면 뒤돌아 베기 (0 = 없음)
+//   parryBreak: 자세 붕괴까지 패링 횟수, parryDecay: 이 초 동안 패링이 없으면 게이지 1칸 감소 (0 = 유지)
+//   delayAfter: 패링을 이 횟수만큼 당하면 다음 휘두르기를 한 박자 늦춤 (칼끝이 떨리는 신호, 0 = 없음)
   normal: { label: '노멀', en: 'NORMAL', desc: '보스 공격 범위가 바닥에 빨갛게 표시됩니다.', telegraph: true,  speed: 1,    tempo: 1,
-            armor: 'active', poiseMul: 1,   poiseRegen: 1,   staggerMul: 1.2, stomp: { hits: 3, follow: false }, backSlash: 0 },
+            armor: 'active', poiseMul: 1,   poiseRegen: 1,   staggerMul: 1.2, stomp: { hits: 3, follow: false }, backSlash: 0,
+            parryBreak: 2, parryDecay: 0, delayAfter: 0 },
   hard:   { label: '하드', en: 'HARD',   desc: '공격 범위 표시가 사라집니다. 보스의 자세를 보고 피하세요.', telegraph: false, speed: 1,    tempo: 1,
-            armor: 'full',   poiseMul: 1.3, poiseRegen: 1,   staggerMul: 1.2, stomp: { hits: 2, follow: false }, backSlash: 1.5 },
+            armor: 'full',   poiseMul: 1.3, poiseRegen: 1,   staggerMul: 1.2, stomp: { hits: 2, follow: false }, backSlash: 1.5,
+            parryBreak: 3, parryDecay: 0, delayAfter: 0 },
   hell:   { label: '헬',   en: 'HELL',   desc: '표시 없음. 보스가 더 빠르게 움직이고 더 빨리 휘두릅니다.', telegraph: false, speed: 1.3,  tempo: 1.3,
-            armor: 'full',   poiseMul: 1.6, poiseRegen: 1.5, staggerMul: 1.1, stomp: { hits: 2, follow: true },  backSlash: 1.0 },
+            armor: 'full',   poiseMul: 1.6, poiseRegen: 1.5, staggerMul: 1.1, stomp: { hits: 2, follow: true },  backSlash: 1.0,
+            parryBreak: 3, parryDecay: 10, delayAfter: 2 },
 };
 const DIFF_KEYS = Object.keys(DIFFICULTY);
 const DIFF = () => DIFFICULTY[game.diff] || DIFFICULTY.normal;
@@ -344,7 +349,9 @@ const poiseMax = b => b.D.poise * (DIFF().poiseMul || 1);
 // 패링: 보스의 베기·돌진을 정확한 타이밍에 받아치면 보스가 무너지고, 그때 치는 첫 공격은 치명타
 //   start~end: 받아치기 성공 구간(초), dur: 전체 동작 시간(빗나가면 이만큼 무방비), cost: 스태미나
 //   점프 내려찍기·충격파·포효는 패링할 수 없음
-const PARRY = { cost: 15, start: .04, end: .24, dur: .5, riposte: 4, arc: 1.75 };
+// 패링: 성공할 때마다 보스 자세 게이지가 1칸 참 → 다 차면 자세 붕괴(반격 가능). 그 전 패링은 공격만 튕겨내고 짧게 휘청이게 함
+//   riposte: 자세 붕괴 중 반격 배율 (약공격 / 강공격), recoil: 게이지가 덜 찼을 때 보스가 휘청이는 시간
+const PARRY = { cost: 15, start: .04, end: .24, dur: .5, riposte: { light: 3, heavy: 2.5 }, recoil: .6, arc: 1.75 };
 
 const PATK = {
   light: { cost:18, wind:.13, active:.1,  rec:.26, dmg:24, poise:22, range:56, arc:2.0, lunge:220, len:42 },
@@ -1572,6 +1579,7 @@ const SND = (() => {
     dash(){ noise({ ft: 'lowpass', f: 320, d: .55, v: .6, a: .05 }); tone({ f: 55, f2: 38, d: .55, v: .3 }); },
     slam(){ const t = ctx.currentTime; noise({ ft: 'highpass', f: 1200, d: .04, v: .8, t }); tone({ f: 80, f2: 24, d: 1.3, v: 1.2, t }); crunch({ f: 300, d: .5, v: .8, t }); noise({ ft: 'lowpass', f: 1400, f2: 70, d: 1.1, v: 1, wet: .6, t }); },
     // 큰 기술 신호: 불길이 빨려 들어가며 치솟는 소리
+    glint(){ const t = ctx.currentTime; [2400, 3600].forEach((f, i) => tone({ type: 'triangle', f, f2: f * .7, t: t + i * .03, d: .35, v: .09, wet: .6 })); noise({ ft: 'highpass', f: 5000, d: .12, v: .2 }); },
     flare(){ noise({ f: 180, f2: 1400, d: 1.0, v: .5, q: .9, a: .5, wet: .5 }); tone({ type: 'sawtooth', f: 45, f2: 110, d: 1.0, v: .14, lp: 500, a: .5 }); },
     fireLine(){ noise({ ft: 'highpass', f: 1800, f2: 900, d: .9, v: .35, a: .02, wet: .4 }); noise({ ft: 'lowpass', f: 600, f2: 200, d: 1.0, v: .5, a: .05 }); },
     nova(){ noise({ f: 280, f2: 2200, d: .75, v: .45, q: .8, wet: .5 }); tone({ type: 'sawtooth', f: 90, f2: 200, d: .75, v: .16, lp: 700 }); },
@@ -1844,7 +1852,7 @@ function makeBoss(key){
   return { D, x: AR.x, y: AR.y - 170, vx:0, vy:0, r:D.r, face:Math.PI/2, hp:D.hp, max:D.hp, chip:D.hp, chipT:0,
     poise:D.poise * (DIFF().poiseMul || 1), poiseT:0, phase:0, state:'intro', t:0, cool:.6, last:null, pat:null, stepI:0, sp:null,
     z:0, dmgAcc:0, dmgT:0, flash:0, roared:false, strafe:1,
-    p2n:0, bigWait:0, noCount:false, desperateDone:false, healSeen:0, chain:0, lastHitT:-9, behindT:0 };
+    p2n:0, bigWait:0, noCount:false, desperateDone:false, healSeen:0, chain:0, lastHitT:-9, behindT:0, pg:0, pgT:0, parryN:0, delayNext:false };
 }
 const hittable = b => b.state !== 'roar' && b.state !== 'dead' && b.z < .3;
 
@@ -1901,12 +1909,23 @@ function startRoll(mv){
 function parrySuccess(token){
   P.lastTok = token; P.parries++;
   P.state = 'idle'; P.t = 0; P.vx = P.vy = 0;
-  const b = B;
-  b.state = 'stagger'; b.t = 0; b.sp = null; b.z = 0; b.vx = b.vy = 0; b.parried = true; b.poise = poiseMax(b);
+  const b = B, Dd = DIFF(), need = Dd.parryBreak || 3;
+  b.sp = null; b.z = 0; b.vx = b.vy = 0; b.pgT = 0; b.chain = 0;
+  b.pg = Math.min(need, b.pg + 1);
+  if (Dd.delayAfter && ++b.parryN >= Dd.delayAfter){ b.parryN = 0; b.delayNext = true; }   // 헬: 다음 휘두르기를 늦춤
   freeze = .16; shake = Math.max(shake, 8); SND.fx('parry');
   const mx = (P.x + b.x) / 2, my = (P.y + b.y) / 2;
   burst(mx, my, 28, '#ffe2a0', 300, .45, 2.5); burst(mx, my, 10, '#ffffff', 180, .3, 2);
-  game.banner = { text: 'PARRY', sub: '지금 공격하면 치명타', t: 0, color: COL.gold };
+  if (b.pg >= need){
+    // 자세 붕괴: 무릎 꿇고 반격 가능
+    b.pg = 0; b.state = 'stagger'; b.t = 0; b.parried = true; b.poise = poiseMax(b); SND.fx('stagger');
+    burst(b.x, b.y, 30, '#ffd27a', 260, .7, 3);
+    game.banner = { text: 'BREAK', sub: '자세 붕괴 · 지금 공격하면 치명타', t: 0, color: '#ffd27a' };
+  } else {
+    // 게이지가 덜 참: 공격만 튕겨내고 짧게 휘청임
+    b.state = 'recoil'; b.t = 0; b.parried = false;
+    game.banner = { text: 'PARRY', sub: `자세 붕괴까지 ${need - b.pg}번`, t: 0, color: COL.gold };
+  }
 }
 // 반환값: 'parried' = 패링 성공 (보스 공격 중단)
 function hurtPlayer(dmg, src, token, kb = 240, parryable = false){
@@ -1917,6 +1936,7 @@ function hurtPlayer(dmg, src, token, kb = 240, parryable = false){
   }
   if (invuln()) return;
   P.lastTok = token;
+  if (B.pg > 0) B.pg--;   // 맞으면 자세 게이지 1칸 감소
   P.hp = Math.max(0, P.hp - dmg); P.chipT = .6; P.flash = .25; SND.fx('hurt');
   freeze = .08; shake = Math.max(shake, 9);
   burst(P.x, P.y, 14, '#7d1014', 190, .55, 3);
@@ -1967,7 +1987,7 @@ function updatePlayer(dt){
       }
       if (a.phase === 'active'){
         p.vx = Math.cos(p.face) * d.lunge; p.vy = Math.sin(p.face) * d.lunge;
-        if (!a.hit && hittable(B) && inCone(p, p.face, a.range, a.arc, B, B.r)){ a.hit = true; damageBoss(a.dmg, d.poise); }
+        if (!a.hit && hittable(B) && inCone(p, p.face, a.range, a.arc, B, B.r)){ a.hit = true; damageBoss(a.dmg, d.poise, a.kind); }
         if (a.t >= d.active){ a.phase = 'rec'; a.t = 0; }
       } else if (a.phase === 'rec'){
         p.vx = mv.x * 50; p.vy = mv.y * 50;
@@ -2007,12 +2027,12 @@ function updatePlayer(dt){
 }
 
 // ---------- 보스 ----------
-function damageBoss(dmg, poise){
+function damageBoss(dmg, poise, kind){
   const b = B;
   if (!hittable(b)) return;
   if (b.state === 'intro'){ b.state = 'chase'; b.t = 0; }
   const crit = b.state === 'stagger', riposte = crit && b.parried;
-  const d = Math.round(dmg * (riposte ? PARRY.riposte : crit ? (DIFF().staggerMul || 1.5) : 1));
+  const d = Math.round(dmg * (riposte ? (PARRY.riposte[kind] || PARRY.riposte.light) : crit ? (DIFF().staggerMul || 1.5) : 1));
   if (riposte){ b.parried = false; game.banner = { text: 'CRITICAL', sub: '', t: 0, color: '#ffd27a' }; }
   b.hp = Math.max(0, b.hp - d); b.chipT = .7; b.dmgAcc += d; b.dmgT = 1.6; b.poiseT = 2.5; b.flash = .12;
   SND.fx('hit', crit);
@@ -2022,6 +2042,8 @@ function damageBoss(dmg, poise){
   if (b.hp <= 0){ SND.music(null); SND.fx('victory'); b.state = 'dead'; b.t = 0; b.sp = null; b.vx = b.vy = 0; game.state = 'won'; game.endT = 0; return; }
   const ph = b.D.phases[b.phase];
   if (b.phase < b.D.phases.length - 1 && b.hp <= b.max * ph.until){
+    b.hp = Math.round(b.max * ph.until); b.chip = Math.max(b.chip, b.hp);   // 남는 피해는 넘어가지 않음 → 누구나 2페이즈를 봄
+    b.pg = 0; b.parryN = 0; b.delayNext = false;
     b.phase++; b.state = 'roar'; b.t = 0; b.roared = false; b.sp = null; b.z = 0; b.vx = b.vy = 0; b.poise = poiseMax(b); return;
   }
   if (!crit){
@@ -2072,7 +2094,12 @@ function startPattern(b, name){
   b.noCount = false;
   startStep(b);
 }
-function startStep(b){ const s = b.pat.steps[b.stepI]; b.sp = { s, phase:'wind', t:0, token: ++TOK, side: s.side || (b.stepI % 2 ? -1 : 1) }; }
+function startStep(b){
+  const s = b.pat.steps[b.stepI];
+  b.sp = { s, phase:'wind', t:0, token: ++TOK, side: s.side || (b.stepI % 2 ? -1 : 1), hold: 0 };
+  // 헬 지연 공격: 예비동작 끝에서 한 박자(약 0.45초) 멈췄다가 휘두름. 그동안 칼끝이 떨림
+  if (b.delayNext && s.type === 'swing' && !s.unparry){ b.delayNext = false; b.sp.hold = .45; }
+}
 function nextStep(b, tempo){
   b.stepI++; b.vx = b.vy = 0;
   if (b.stepI < b.pat.steps.length) startStep(b);
@@ -2092,6 +2119,7 @@ function runStep(b, dt, tempo){
   const sp = b.sp, s = sp.s; sp.t += dt;
   const wind = s.wind / tempo, toP = Math.atan2(P.y - b.y, P.x - b.x);
   if (s.type === 'swing' || s.type === 'flameSlam'){
+    const wind = s.wind / tempo + (sp.hold || 0);
     if (sp.phase === 'wind'){
       if (sp.t < wind * .8) b.face = turn(b.face, toP, s.track * dt);
       const adv = dist(b, P) > s.range * .7 ? 60 : 0;
@@ -2106,7 +2134,7 @@ function runStep(b, dt, tempo){
       // 가로·대각선은 칼끝이 지나간 범위만, 내려치기·올려치기·찌르기는 앞쪽 부채꼴 전체를 판정
       let mid = b.face, arc = s.arc;
       if (side){ const a0 = -side * s.arc / 2, a1 = lerp(a0, side * s.arc / 2, k); mid = b.face + (a0 + a1) / 2; arc = Math.abs(a1 - a0) + .2; }
-      if (inCone(b, mid, s.range, arc, P, P.r) && hurtPlayer(s.dmg, b, sp.token, 240, true) === 'parried') return;
+      if (inCone(b, mid, s.range, arc, P, P.r) && hurtPlayer(s.dmg, b, sp.token, 240, !s.unparry) === 'parried') return;
       if (sp.t >= .16) nextStep(b, tempo);
     }
   } else if (s.type === 'dash'){
@@ -2158,10 +2186,11 @@ function runStep(b, dt, tempo){
 }
 
 function updateBoss(dt){
-  const b = B, ph = b.D.phases[b.phase], tempo = (ph.tempo || 1) * DIFF().tempo;
+  const b = B, ph = b.D.phases[b.phase], tempo = (ph.tempo || 1) * DIFF().tempo, Dd0 = DIFF();
   b.t += dt; b.flash = Math.max(0, b.flash - dt);
   if (b.chipT > 0) b.chipT -= dt; else b.chip = Math.max(b.hp, b.chip - b.max * .3 * dt);
   if (b.dmgT > 0) b.dmgT -= dt; else b.dmgAcc = 0;
+  if (Dd0.parryDecay && b.pg > 0 && (b.pgT += dt) >= Dd0.parryDecay){ b.pg--; b.pgT = 0; }
   if (b.poiseT > 0) b.poiseT -= dt; else b.poise = Math.min(poiseMax(b), b.poise + 30 * (DIFF().poiseRegen || 1) * dt);
   const d = dist(b, P), toP = Math.atan2(P.y - b.y, P.x - b.x);
   const playerDown = P.state === 'dead' || game.state === 'title';
@@ -2207,9 +2236,13 @@ function updateBoss(dt){
       b.vx *= Math.exp(-10 * dt); b.vy *= Math.exp(-10 * dt); b.face = turn(b.face, toP, 1.2 * dt);
       if (b.t >= b.recDur){ b.state = 'chase'; b.t = 0; b.cool = .2 + Math.random() * .5; }
       break;
+    case 'recoil':
+      b.vx *= Math.exp(-10 * dt); b.vy *= Math.exp(-10 * dt);
+      if (b.t >= PARRY.recoil){ b.state = 'chase'; b.t = 0; b.cool = .25; }
+      break;
     case 'stagger':
       b.vx = b.vy = 0;
-      if (b.t >= 1.6){ b.state = 'chase'; b.t = 0; b.cool = .15; }
+      if (b.t >= 1.6){ b.state = 'chase'; b.t = 0; b.cool = .15; b.parried = false; }
       break;
     case 'roar':
       b.vx = b.vy = 0;
@@ -2366,11 +2399,20 @@ function updateScene(dt){
     bTarget = mo ? motionPose(br.rest, mo, 'rec', Math.min(1, b.t / Math.max(.3, b.recDur * .7))) : br.rest; bRate = mo ? 20 : 8; brz = -.08;
   }
   else if (b.state === 'roar'){ bTarget = mkPose(POSES.roar, br.rest); bRate = 10; brz = .35 * Math.min(1, b.t * 3); }
+  else if (b.state === 'recoil'){ const k = Math.sin(Math.min(1, b.t / PARRY.recoil) * Math.PI); bTarget = mkPose(POSES.stagger, br.rest); bRate = 16; brz = -.22 * k; }
   else if (b.state === 'stagger'){ bTarget = mkPose(POSES.stagger, br.rest); bRate = 18; brz = -.3 + Math.sin(b.t * 30) * .05 * (1 - b.t / 1.6); bRigY = .7; }
   else if (b.state === 'dead'){ const k = Math.min(1, b.t / 1.4); brz = -k * 1.45; bRigY = lerp(.95, .35, k); bTarget = mkPose(POSES.stagger, br.rest); bRate = 6; }
   const sink = b.state === 'dead' ? Math.max(0, b.t - 2.2) * .9 : 0;
   br.armor.emissive.setHex(b.flash > 0 ? 0x553a2a : (phase2 ? 0x0c0200 : 0x000000));
-  br.steel.emissive.setHex(phase2 ? 0x3a1203 : 0x000000);
+  // 패링 불가 신호: 예비동작 후반에 검이 붉게 번뜩임 / 지연 공격: 멈춘 동안 칼끝이 떨림
+  let glint = 0;
+  if (b.state === 'attack' && b.sp && b.sp.phase === 'wind'){
+    const sp = b.sp, ww = sp.s.wind / ((ph.tempo || 1) * DIFF().tempo);
+    if (sp.s.unparry){ const g = (sp.t / ww - .55) / .45; if (g > 0 && g < 1){ glint = Math.sin(g * Math.PI); if (!sp.glinted){ sp.glinted = true; SND.fx('glint'); } } }
+    if (sp.hold && sp.t > ww){ brz += Math.sin(now * 70) * .025; br.bladeG.rotation.x = Math.sin(now * 55) * .06; } else br.bladeG.rotation.x = 0;
+  } else br.bladeG.rotation.x = 0;
+  if (glint > 0) br.steel.emissive.setRGB(1.6 * glint, .12 * glint, .04 * glint);
+  else br.steel.emissive.setHex(phase2 ? 0x3a1203 : 0x000000);
   // 2페이즈 외형 (배경과 같이 포효 순간부터 서서히) + 큰 기술 예비동작 동안 불꽃 왕관이 커짐
   const bigWind = b.state === 'attack' && b.pat && b.pat.big && b.sp && b.sp.phase === 'wind';
   b.flareK = lerp(b.flareK || 0, bigWind ? 1 : 0, Math.min(1, dt * (bigWind ? 6 : 3)));
@@ -2537,6 +2579,19 @@ function drawHUD(){
   ctx.font = '700 17px "Nanum Myeongjo", serif'; ctx.fillStyle = COL.bone; ctx.fillText(B.D.name, bx, by - 9);
   if (B.dmgAcc > 0){ ctx.textAlign = 'right'; ctx.font = '600 15px "Cinzel", serif'; ctx.fillStyle = COL.bone; ctx.fillText(String(B.dmgAcc), bx + bw, by - 9); ctx.textAlign = 'left'; }
   bar(bx, by, bw, 9, B.hp, B.max, B.chip, '#8d1418');
+  // 자세 게이지 (패링 성공 칸): 보스 이름 오른쪽
+  {
+    ctx.font = '700 17px "Nanum Myeongjo", serif';
+    const need = DIFF().parryBreak || 3, nw = ctx.measureText(B.D.name).width;
+    ctx.save(); ctx.translate(bx + nw + 22, by - 15);
+    for (let i = 0; i < need; i++){
+      const on = i < B.pg; ctx.save(); ctx.translate(i * 17, 0); ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = on ? '#ffd27a' : 'rgba(20,16,12,.7)'; ctx.strokeStyle = on ? '#fff0c8' : 'rgba(217,207,188,.55)'; ctx.lineWidth = 1.3;
+      if (on){ ctx.shadowColor = '#ffb040'; ctx.shadowBlur = 8; }
+      ctx.fillRect(-4.5, -4.5, 9, 9); ctx.shadowBlur = 0; ctx.strokeRect(-4.5, -4.5, 9, 9); ctx.restore();
+    }
+    ctx.restore();
+  }
   // 경과 시간 (모바일은 버튼 자리라 생략)
   if (game.banner){
     const bn = game.banner, a = bn.t < .5 ? 1 : Math.max(0, 1 - (bn.t - .5) / .8), sc = 1 + .25 * Math.max(0, 1 - bn.t / .15);
